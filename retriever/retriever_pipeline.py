@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
@@ -12,6 +13,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.retrievers import BaseRetriever
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
+from pydantic import ConfigDict, Field
+
+from pydantic import Field, ConfigDict
 
 DEFAULT_VECTOR_DIR = Path("vector_db/esg_all")
 DEFAULT_COLLECTION = "esg_all"
@@ -92,27 +96,16 @@ def default_post_filter(doc: Document) -> bool:
 class ESGRetriever(BaseRetriever):
     """리라이팅 → 벡터 검색 → 재정렬 → 후처리 흐름을 묶은 리트리버."""
 
-    def __init__(
-        self,
-        vectorstore: Chroma,
-        query_rewriter: QueryRewriter | None = None,
-        metadata_filter: Optional[Dict] = None,
-        reranker: CrossEncoderReranker | None = None,
-        post_filter: PostFilter | None = None,
-        *,
-        top_k: int = 6,
-        fetch_k: int = 30,
-        mmr_lambda: float = 0.7,
-    ) -> None:
-        super().__init__()
-        self.vectorstore = vectorstore
-        self.query_rewriter = query_rewriter
-        self.metadata_filter = metadata_filter or {}
-        self.reranker = reranker
-        self.post_filter = post_filter or default_post_filter
-        self.top_k = top_k
-        self.fetch_k = fetch_k
-        self.mmr_lambda = mmr_lambda
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    vectorstore: Chroma
+    query_rewriter: QueryRewriter | None = None
+    metadata_filter: Dict | None = Field(default_factory=dict)
+    reranker: CrossEncoderReranker | None = None
+    post_filter: PostFilter | None = default_post_filter
+    top_k: int = 6
+    fetch_k: int = 30
+    mmr_lambda: float = 0.7
 
     @staticmethod
     def _parse_input(
@@ -127,7 +120,8 @@ class ESGRetriever(BaseRetriever):
         raise ValueError("Unsupported retriever input format")
 
     def _search(self, query: str, metadata_filter: Dict | None) -> List[Document]:
-        filter_payload = {**self.metadata_filter, **(metadata_filter or {})}
+        base_filter = self.metadata_filter or {}
+        filter_payload = {**base_filter, **(metadata_filter or {})}
         # fetch_k ensures we have enough variety for reranking/post filtering.
         docs = self.vectorstore.max_marginal_relevance_search(
             query,
@@ -217,7 +211,7 @@ if __name__ == "__main__":  # pragma: no cover
             "OPENAI_API_KEY가 환경 변수에 없습니다. .env에 추가하거나 직접 export 해주세요."
         )
 
-    question = "DL건설의 안전보건 정책과 탄소 배출 목표를 알려줘"
+    question = "DL건설의 현재 탄소배출 정보를 알려줘"
     llm = ChatOpenAI(model="gpt-4o-mini")
     retriever = build_retriever(llm)
     docs = retriever.invoke({"question": question, "metadata_filter": {"source_type": "companies"}})
