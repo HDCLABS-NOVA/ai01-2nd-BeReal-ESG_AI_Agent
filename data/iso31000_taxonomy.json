@@ -1,0 +1,294 @@
+{
+  "version": "2025-ISO31000-v1",
+  "negation_tokens": [
+    "없",
+    "무",
+    "양호",
+    "경미",
+    "미발생",
+    "미해당"
+  ],
+  "likelihood_modifiers": {
+    "increase": [
+      "지속",
+      "반복",
+      "증가",
+      "누적",
+      "확대"
+    ],
+    "decrease": [
+      "개선",
+      "모니터링",
+      "관리",
+      "감소",
+      "완료"
+    ]
+  },
+  "impact_modifiers": {
+    "increase": [
+      "중대",
+      "사망",
+      "형사",
+      "벌금",
+      "영향"
+    ],
+    "decrease": [
+      "경미",
+      "사소",
+      "부분",
+      "단계"
+    ]
+  },
+  "rating_matrix": [
+    {
+      "min_score": 20,
+      "label": "Extreme",
+      "description": "조직 리스크 허용도 초과",
+      "treatment": "즉시 최고경영진 보고 및 작업 중지",
+      "acceptance": "거부"
+    },
+    {
+      "min_score": 12,
+      "label": "High",
+      "description": "강도 높은 통제 필요",
+      "treatment": "단기 시정조치와 CAPA 수립",
+      "acceptance": "조건부"
+    },
+    {
+      "min_score": 6,
+      "label": "Medium",
+      "description": "모니터링 필요",
+      "treatment": "모니터링·KPI 추적",
+      "acceptance": "허용"
+    },
+    {
+      "min_score": 1,
+      "label": "Low",
+      "description": "허용 가능한 수준",
+      "treatment": "정기 모니터링",
+      "acceptance": "허용"
+    }
+  ],
+  "risk_items": [
+    {
+      "id": "SAF_FALL",
+      "area": "안전",
+      "risk_source": "고소/비계 작업",
+      "event": "추락 또는 낙하 사고",
+      "consequence": "중대재해, 공사 중단, 벌점",
+      "keywords": [
+        "추락",
+        "낙하",
+        "고소",
+        "비계",
+        "안전대"
+      ],
+      "synonyms": [
+        "fall",
+        "height work"
+      ],
+      "default_likelihood": 3,
+      "default_impact": 4,
+      "controls": [
+        "추락방지 난간 설치",
+        "이중 비계 점검"
+      ],
+      "treatments": [
+        "작업허가제 강화",
+        "추락방지 설비 투자"
+      ],
+      "kpi": [
+        "고소작업 허가서 준수율"
+      ],
+      "min_similarity": 0.3
+    },
+    {
+      "id": "SAF_ELECTRIC",
+      "area": "안전",
+      "risk_source": "전기/MEP 작업",
+      "event": "감전·아크플래시",
+      "consequence": "부상, 설비중단",
+      "keywords": [
+        "감전",
+        "정전",
+        "차단",
+        "LOTO",
+        "전기"
+      ],
+      "synonyms": [
+        "arc flash",
+        "electrical"
+      ],
+      "default_likelihood": 3,
+      "default_impact": 4,
+      "controls": [
+        "LOTO 절차",
+        "전기안전 교육"
+      ],
+      "treatments": [
+        "정전 계획 수립",
+        "절연 보호구 투자"
+      ],
+      "kpi": [
+        "LOTO 점검 이행률"
+      ],
+      "min_similarity": 0.3
+    },
+    {
+      "id": "ENV_DUST",
+      "area": "환경",
+      "risk_source": "비산먼지/대기 배출",
+      "event": "민원·과태료 발생",
+      "consequence": "벌금, 공사 지연",
+      "keywords": [
+        "비산먼지",
+        "먼지",
+        "배출",
+        "살수",
+        "민원"
+      ],
+      "synonyms": [
+        "dust",
+        "emission"
+      ],
+      "default_likelihood": 3,
+      "default_impact": 3,
+      "controls": [
+        "살수 차량 운영",
+        "방진막 설치"
+      ],
+      "treatments": [
+        "실시간 모니터링",
+        "환경 인허가 재점검"
+      ],
+      "kpi": [
+        "민원 건수",
+        "비산먼지 측정 횟수"
+      ],
+      "min_similarity": 0.28
+    },
+    {
+      "id": "ENV_WASTE",
+      "area": "환경",
+      "risk_source": "폐기물/누출 관리",
+      "event": "폐수·오염물 누출",
+      "consequence": "환경오염, 벌금",
+      "keywords": [
+        "누출",
+        "오염",
+        "폐수",
+        "유출",
+        "저장탱크"
+      ],
+      "synonyms": [
+        "spill",
+        "leak"
+      ],
+      "default_likelihood": 3,
+      "default_impact": 4,
+      "controls": [
+        "2차 차단설비",
+        "비상대응훈련"
+      ],
+      "treatments": [
+        "누출 감지 시스템 도입",
+        "환경 사고 보고 프로토콜"
+      ],
+      "kpi": [
+        "누출 건수",
+        "비상훈련 횟수"
+      ],
+      "min_similarity": 0.3
+    },
+    {
+      "id": "LABOR_WAGE",
+      "area": "노동",
+      "risk_source": "근로계약/임금",
+      "event": "임금체불·근로시간 위반",
+      "consequence": "노동분쟁, 벌금",
+      "keywords": [
+        "임금",
+        "체불",
+        "근로시간",
+        "휴게",
+        "초과근로"
+      ],
+      "synonyms": [
+        "wage delay",
+        "overtime"
+      ],
+      "default_likelihood": 3,
+      "default_impact": 3,
+      "controls": [
+        "전자 근로계약",
+        "근태 시스템"
+      ],
+      "treatments": [
+        "체불 해결 계획",
+        "근로시간 모니터링"
+      ],
+      "kpi": [
+        "임금체불 건수",
+        "근로시간 위반 건수"
+      ],
+      "min_similarity": 0.3
+    },
+    {
+      "id": "GOV_CORRUPTION",
+      "area": "거버넌스",
+      "risk_source": "부패/공정거래",
+      "event": "담합·금품수수",
+      "consequence": "법적 제재, 입찰 제한",
+      "keywords": [
+        "부패",
+        "담합",
+        "뇌물",
+        "허위",
+        "공정거래"
+      ],
+      "synonyms": [
+        "bribery",
+        "cartel"
+      ],
+      "default_likelihood": 2,
+      "default_impact": 4,
+      "controls": [
+        "윤리강령",
+        "제보채널"
+      ],
+      "treatments": [
+        "CP 교육 강화",
+        "내부통제 점검"
+      ],
+      "kpi": [
+        "윤리위반 제보 건수"
+      ],
+      "min_similarity": 0.27
+    }
+  ],
+  "acceptance_rules": {
+    "안전": {
+      "High": "거부",
+      "Medium": "조건부",
+      "Low": "허용"
+    },
+    "환경": {
+      "Extreme": "거부",
+      "High": "조건부",
+      "Medium": "허용",
+      "Low": "허용"
+    },
+    "노동": {
+      "Extreme": "거부",
+      "High": "조건부",
+      "Medium": "조건부",
+      "Low": "허용"
+    },
+    "거버넌스": {
+      "Extreme": "거부",
+      "High": "조건부",
+      "Medium": "조건부",
+      "Low": "허용"
+    }
+  }
+}

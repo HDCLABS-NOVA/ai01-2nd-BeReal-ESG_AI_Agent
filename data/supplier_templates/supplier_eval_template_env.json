@@ -1,0 +1,755 @@
+{
+  "version": "2025 Supplier Composite v2",
+  "areas": [
+    {
+      "name": "안전보건",
+      "weight": 1.092,
+      "items": [
+        {
+          "name": "안전관리자 배치",
+          "criterion": "법정 자격 보유 상주 관리자 배치",
+          "weight": 1.05,
+          "base_score": 3,
+          "evidence_keywords": [
+            "안전관리자",
+            "CSO",
+            "선임",
+            "상주"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "전담",
+              "impact": 0.5
+            },
+            {
+              "keyword": "상주",
+              "impact": 0.5
+            },
+            {
+              "keyword": "ISO45001",
+              "impact": 1.0
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "미배치",
+              "impact": 1.5
+            },
+            {
+              "keyword": "겸임",
+              "impact": 1.0
+            },
+            {
+              "keyword": "부재",
+              "impact": 1.0
+            }
+          ],
+          "synonyms": [
+            "CSO",
+            "Chief Safety Officer",
+            "안전총괄"
+          ],
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "위험성평가(RA) 실시",
+          "criterion": "공정·작업단위 위험성평가 연 1회 이상",
+          "weight": 1.0,
+          "base_score": 3,
+          "evidence_keywords": [
+            "위험성평가",
+            "RA",
+            "JSA"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "연간",
+              "impact": 0.5
+            },
+            {
+              "keyword": "정기",
+              "impact": 0.5
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "미실시",
+              "impact": 1.0
+            },
+            {
+              "keyword": "중단",
+              "impact": 0.8
+            }
+          ],
+          "synonyms": [
+            "JSA",
+            "Risk Assessment"
+          ],
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "사고이력(3년)",
+          "criterion": "최근 3년 중대·재해 여부 및 재발방지 대책",
+          "weight": 1.0,
+          "base_score": 3,
+          "evidence_keywords": [
+            "사고",
+            "재해",
+            "재발",
+            "중대"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "무재해",
+              "impact": 1.0
+            },
+            {
+              "keyword": "재발방지",
+              "impact": 0.5
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "중대재해",
+              "impact": 2.0
+            },
+            {
+              "keyword": "사망",
+              "impact": 2.0
+            }
+          ],
+          "synonyms": [
+            "사고",
+            "재해",
+            "Incident"
+          ],
+          "zero_tolerance_keywords": [
+            "사망",
+            "중대재해"
+          ],
+          "critical": true,
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "법규위반 이력",
+          "criterion": "산안법·중대재해법 위반 여부",
+          "weight": 1.0,
+          "base_score": 3,
+          "evidence_keywords": [
+            "위반",
+            "벌금",
+            "과태료"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "무위반",
+              "impact": 0.5
+            },
+            {
+              "keyword": "해소",
+              "impact": 0.5
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "위반",
+              "impact": 1.0
+            },
+            {
+              "keyword": "벌금",
+              "impact": 1.0
+            }
+          ],
+          "synonyms": [
+            "위반 사례",
+            "행정처분"
+          ],
+          "zero_tolerance_keywords": [
+            "법규 위반",
+            "산안법 위반",
+            "형사처벌"
+          ],
+          "critical": true,
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "교육훈련(TBM, 법정교육)",
+          "criterion": "TBM 일일 실시·필수 교육 수료",
+          "weight": 0.95,
+          "base_score": 3,
+          "evidence_keywords": [
+            "TBM",
+            "교육",
+            "훈련"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "100%",
+              "impact": 0.5
+            },
+            {
+              "keyword": "정기",
+              "impact": 0.5
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "미수료",
+              "impact": 0.5
+            },
+            {
+              "keyword": "부족",
+              "impact": 0.5
+            }
+          ],
+          "synonyms": [
+            "TBM",
+            "Tool Box Meeting"
+          ],
+          "scoring_mode": "log_scale",
+          "metric_pattern": "(\\d{1,3})\\s*회",
+          "area_overrides": {}
+        },
+        {
+          "name": "보호구(PPE) 관리",
+          "criterion": "지급·점검·교체 체계",
+          "weight": 0.9,
+          "base_score": 3,
+          "evidence_keywords": [
+            "PPE",
+            "보호구",
+            "교체",
+            "점검"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "RFID",
+              "impact": 0.3
+            },
+            {
+              "keyword": "주기",
+              "impact": 0.3
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "미착용",
+              "impact": 0.7
+            }
+          ],
+          "synonyms": [
+            "LOTO",
+            "Safety gear"
+          ],
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        }
+      ]
+    },
+    {
+      "name": "환경",
+      "weight": 1.35,
+      "items": [
+        {
+          "name": "폐기물 관리",
+          "criterion": "분리배출·인계서·보관상태",
+          "weight": 1.0,
+          "base_score": 3,
+          "evidence_keywords": [
+            "폐기물",
+            "인계서",
+            "보관"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "전자",
+              "impact": 0.5
+            },
+            {
+              "keyword": "위탁",
+              "impact": 0.3
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "불법",
+              "impact": 1.0
+            },
+            {
+              "keyword": "미작성",
+              "impact": 0.7
+            }
+          ],
+          "synonyms": [
+            "폐기물 인계서",
+            "Waste Manifest"
+          ],
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "소음/비산먼지 저감",
+          "criterion": "살수·방진막·측정 기록",
+          "weight": 0.9,
+          "base_score": 3,
+          "evidence_keywords": [
+            "소음",
+            "먼지",
+            "측정"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "모니터링",
+              "impact": 0.5
+            },
+            {
+              "keyword": "자동",
+              "impact": 0.3
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "민원",
+              "impact": 0.8
+            },
+            {
+              "keyword": "과다",
+              "impact": 0.8
+            }
+          ],
+          "synonyms": [
+            "Dust suppression",
+            "Sound level"
+          ],
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "화학물질 관리(MSDS)",
+          "criterion": "MSDS 비치·누출대응 계획",
+          "weight": 0.95,
+          "base_score": 3,
+          "evidence_keywords": [
+            "MSDS",
+            "화학",
+            "누출"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "시나리오",
+              "impact": 0.5
+            },
+            {
+              "keyword": "교육",
+              "impact": 0.3
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "미비치",
+              "impact": 1.0
+            },
+            {
+              "keyword": "누출",
+              "impact": 1.0
+            }
+          ],
+          "synonyms": [
+            "MSDS",
+            "SDS"
+          ],
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "환경법규 준수",
+          "criterion": "배출허가·오염도 측정·벌칙 여부",
+          "weight": 1.05,
+          "base_score": 3,
+          "evidence_keywords": [
+            "배출",
+            "법규",
+            "허가"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "허가",
+              "impact": 0.5
+            },
+            {
+              "keyword": "준수",
+              "impact": 0.5
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "초과",
+              "impact": 1.0
+            },
+            {
+              "keyword": "위반",
+              "impact": 1.0
+            }
+          ],
+          "synonyms": [
+            "배출허가",
+            "환경 인허가"
+          ],
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        }
+      ]
+    },
+    {
+      "name": "노동·인권",
+      "weight": 0.997,
+      "items": [
+        {
+          "name": "근로계약/임금지급",
+          "criterion": "표준근로계약·임금체불 여부",
+          "weight": 1.0,
+          "base_score": 3,
+          "evidence_keywords": [
+            "근로계약",
+            "임금",
+            "체불"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "전자계약",
+              "impact": 0.5
+            },
+            {
+              "keyword": "정시",
+              "impact": 0.3
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "체불",
+              "impact": 1.5
+            }
+          ],
+          "synonyms": [
+            "근로계약서",
+            "Payroll"
+          ],
+          "zero_tolerance_keywords": [
+            "임금체불"
+          ],
+          "critical": true,
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "근로시간 준수",
+          "criterion": "연장·휴게 기준 준수",
+          "weight": 0.9,
+          "base_score": 3,
+          "evidence_keywords": [
+            "근로시간",
+            "연장",
+            "휴게"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "관리",
+              "impact": 0.3
+            },
+            {
+              "keyword": "시스템",
+              "impact": 0.3
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "초과",
+              "impact": 0.8
+            },
+            {
+              "keyword": "위반",
+              "impact": 0.8
+            }
+          ],
+          "synonyms": [
+            "근태",
+            "근무시간"
+          ],
+          "zero_tolerance_keywords": [
+            "과로사",
+            "장시간 노동"
+          ],
+          "critical": true,
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "인권·차별 금지 정책",
+          "criterion": "문서화된 정책 투명성",
+          "weight": 0.9,
+          "base_score": 3,
+          "evidence_keywords": [
+            "인권",
+            "차별",
+            "정책"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "정책",
+              "impact": 0.3
+            },
+            {
+              "keyword": "교육",
+              "impact": 0.3
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "사건",
+              "impact": 0.8
+            }
+          ],
+          "synonyms": [
+            "인권정책",
+            "차별 금지"
+          ],
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "신고채널 운영",
+          "criterion": "익명 신고·피해자 보호 절차",
+          "weight": 0.85,
+          "base_score": 3,
+          "evidence_keywords": [
+            "신고",
+            "핫라인",
+            "제보"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "익명",
+              "impact": 0.5
+            },
+            {
+              "keyword": "보호",
+              "impact": 0.3
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "미설치",
+              "impact": 0.8
+            }
+          ],
+          "synonyms": [
+            "Whistleblowing",
+            "Ethics hotline"
+          ],
+          "scoring_mode": "log_scale",
+          "metric_pattern": "(\\d{1,3})\\s*건",
+          "area_overrides": {}
+        }
+      ]
+    },
+    {
+      "name": "윤리·거버넌스",
+      "weight": 0.81,
+      "items": [
+        {
+          "name": "부패방지·윤리강령",
+          "criterion": "임직원 서약·교육 이행",
+          "weight": 1.0,
+          "base_score": 3,
+          "evidence_keywords": [
+            "윤리",
+            "부패",
+            "서약"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "서약",
+              "impact": 0.3
+            },
+            {
+              "keyword": "교육",
+              "impact": 0.3
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "위반",
+              "impact": 0.8
+            }
+          ],
+          "synonyms": [
+            "윤리 서약",
+            "Anti-bribery"
+          ],
+          "zero_tolerance_keywords": [
+            "뇌물",
+            "횡령"
+          ],
+          "critical": true,
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "공정거래 준수",
+          "criterion": "하도급·입찰 공정성 관리",
+          "weight": 1.0,
+          "base_score": 3,
+          "evidence_keywords": [
+            "공정거래",
+            "하도급",
+            "입찰"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "서약",
+              "impact": 0.3
+            },
+            {
+              "keyword": "위원회",
+              "impact": 0.3
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "제재",
+              "impact": 0.8
+            },
+            {
+              "keyword": "담합",
+              "impact": 1.5
+            }
+          ],
+          "synonyms": [
+            "하도급법",
+            "입찰 담합"
+          ],
+          "zero_tolerance_keywords": [
+            "담합",
+            "입찰비리"
+          ],
+          "critical": true,
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "문서관리",
+          "criterion": "계약·위험문서 보관체계",
+          "weight": 0.85,
+          "base_score": 3,
+          "evidence_keywords": [
+            "문서",
+            "관리",
+            "보관"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "전자",
+              "impact": 0.3
+            },
+            {
+              "keyword": "시스템",
+              "impact": 0.3
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "분실",
+              "impact": 0.8
+            }
+          ],
+          "synonyms": [
+            "문서중앙관리",
+            "EDMS"
+          ],
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        },
+        {
+          "name": "이해관계 충돌 관리",
+          "criterion": "신고·사전 승인 절차",
+          "weight": 0.85,
+          "base_score": 3,
+          "evidence_keywords": [
+            "이해관계",
+            "conflict",
+            "승인"
+          ],
+          "positive_signals": [
+            {
+              "keyword": "사전",
+              "impact": 0.3
+            },
+            {
+              "keyword": "신청",
+              "impact": 0.3
+            }
+          ],
+          "negative_signals": [
+            {
+              "keyword": "미정",
+              "impact": 0.8
+            }
+          ],
+          "synonyms": [
+            "Conflict of interest",
+            "COI"
+          ],
+          "scoring_mode": "additive",
+          "area_overrides": {}
+        }
+      ]
+    }
+  ],
+  "grade_thresholds": [
+    {
+      "grade": "A",
+      "min_ratio": 0.85,
+      "label": "선도 협력사"
+    },
+    {
+      "grade": "B",
+      "min_ratio": 0.7,
+      "label": "관리 협력사"
+    },
+    {
+      "grade": "C",
+      "min_ratio": 0.0,
+      "label": "개선 요구"
+    }
+  ],
+  "global_positive_signals": {
+    "ISO": 0.5,
+    "ISO14001": 0.8,
+    "LCA": 0.5,
+    "개선": 0.5,
+    "무재해": 1.0,
+    "우수": 0.5,
+    "인증": 0.5
+  },
+  "global_negative_signals": {
+    "미흡": 0.8,
+    "벌금": 1.0,
+    "사고": 1.0,
+    "오염수": 1.2,
+    "위반": 1.0,
+    "중대재해": 2.0,
+    "지연": 0.8,
+    "폐수유출": 1.5
+  },
+  "name": "KR Environmental Service Template",
+  "industry_tags": [
+    "환경",
+    "env",
+    "폐기물",
+    "수처리"
+  ]
+}
