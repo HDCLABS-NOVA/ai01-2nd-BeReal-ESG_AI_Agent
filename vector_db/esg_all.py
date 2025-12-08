@@ -29,7 +29,7 @@ from langdetect import detect
 
 # 0. 기본 설정
 DATA_DIR = Path("data")
-VECTOR_DIR = "vector_db/all_esg"
+VECTOR_DIR = "vector_db/esg_all"
 
 # HuggingFace 임베딩 (4060 GPU 활용 가능)
 embedding_model = HuggingFaceEmbeddings(
