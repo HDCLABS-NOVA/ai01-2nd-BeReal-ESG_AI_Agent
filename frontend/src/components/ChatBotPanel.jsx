@@ -54,6 +54,18 @@ function ChatBotPanel() {
               return copy
             })
           }
+          if (payload.report) {
+            // Signal MainContent to add this report
+            // Simple logic: Use current query as title (or generic) and split items by newlines for now (since report is markdown)
+            // Ideally, MainContent would parse the markdown. For now, let's pass the raw markdown.
+            const reportData = {
+              id: Date.now(),
+              title: "새로 생성된 보고서", // Or derive from query if accessible
+              content: payload.report, // Pass full content
+              items: payload.report.split('\n').filter(line => line.trim().startsWith('-') || line.trim().startsWith('*')).map(l => l.replace(/^[-*]\s/, ''))
+            }
+            window.dispatchEvent(new CustomEvent("newReport", { detail: reportData }))
+          }
           if (payload.error) {
             throw new Error(payload.error)
           }
@@ -120,29 +132,29 @@ function ChatBotPanel() {
 }
 
 export default ChatBotPanel
-  const markdownComponents = {
-    h1: ({ node, ...props }) => (
-      <h2 className="markdown-h1" {...props} />
-    ),
-    h2: ({ node, ...props }) => (
-      <h3 className="markdown-h2" {...props} />
-    ),
-    h3: ({ node, ...props }) => (
-      <h4 className="markdown-h3" {...props} />
-    ),
-    strong: ({ node, ...props }) => (
-      <strong className="markdown-strong" {...props} />
-    ),
-    ul: ({ node, ordered, ...props }) => (
-      <ul className="markdown-list" {...props} />
-    ),
-    ol: ({ node, ordered, ...props }) => (
-      <ol className="markdown-list" {...props} />
-    ),
-    code: ({ node, inline, ...props }) => (
-      inline ? <code className="markdown-code" {...props} /> : <code className="markdown-code-block" {...props} />
-    ),
-    pre: ({ node, ...props }) => (
-      <pre className="markdown-pre" {...props} />
-    ),
-  }
+const markdownComponents = {
+  h1: ({ node, ...props }) => (
+    <h2 className="markdown-h1" {...props} />
+  ),
+  h2: ({ node, ...props }) => (
+    <h3 className="markdown-h2" {...props} />
+  ),
+  h3: ({ node, ...props }) => (
+    <h4 className="markdown-h3" {...props} />
+  ),
+  strong: ({ node, ...props }) => (
+    <strong className="markdown-strong" {...props} />
+  ),
+  ul: ({ node, ordered, ...props }) => (
+    <ul className="markdown-list" {...props} />
+  ),
+  ol: ({ node, ordered, ...props }) => (
+    <ol className="markdown-list" {...props} />
+  ),
+  code: ({ node, inline, ...props }) => (
+    inline ? <code className="markdown-code" {...props} /> : <code className="markdown-code-block" {...props} />
+  ),
+  pre: ({ node, ...props }) => (
+    <pre className="markdown-pre" {...props} />
+  ),
+}

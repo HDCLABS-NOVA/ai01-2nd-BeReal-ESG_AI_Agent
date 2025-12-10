@@ -26,8 +26,17 @@ function MainContent() {
         },
       ])
     }
+    const reportHandler = (e) => {
+      const newReport = e.detail
+      setReports(prev => [newReport, ...prev])
+    }
+
     window.addEventListener("showSample", handler)
-    return () => window.removeEventListener("showSample", handler)
+    window.addEventListener("newReport", reportHandler)
+    return () => {
+      window.removeEventListener("showSample", handler)
+      window.removeEventListener("newReport", reportHandler)
+    }
   }, [])
 
   const handleSave = (reportTitle) => {

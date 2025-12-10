@@ -23,12 +23,14 @@ export default function FileUploader({ onUpload, files }) {
 
     const handleFileSelect = async (e) => {
         const selectedFiles = Array.from(e.target.files)
+        e.target.value = "" // Reset input to allow selecting the same file again
         await uploadFiles(selectedFiles)
     }
 
     const uploadFiles = async (fileList) => {
-        // In a real app, you would upload to the backend here
-        // For now, we simulate the upload and update local state
+        // Optimistic UI Update: Show files immediately
+        const newFiles = fileList.map(f => ({ name: f.name, size: f.size }))
+        onUpload(newFiles)
 
         for (const file of fileList) {
             const formData = new FormData()
@@ -42,10 +44,9 @@ export default function FileUploader({ onUpload, files }) {
                 if (!response.ok) throw new Error('Upload failed')
             } catch (error) {
                 console.error('Error uploading file:', error)
+                // Optional: You could update state to show error status here
             }
         }
-
-        onUpload(fileList.map(f => ({ name: f.name, size: f.size })))
     }
 
     return (

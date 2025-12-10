@@ -1,9 +1,16 @@
-import React from "react"
+import React, { useState } from "react"
 import "./Sidebar.css"
 import fileIcon from "../assets/file_icon.png"
 import messageIcon from "../assets/message_icon.png"
+import FileUploader from "./FileUploader"
 
 function Sidebar({ isOpen }) {
+  const [uploadedFiles, setUploadedFiles] = useState([])
+
+  const handleUpload = (newFiles) => {
+    setUploadedFiles((prev) => [...prev, ...newFiles])
+  }
+
   return (
     <div className={`sidebar-wrapper ${isOpen ? "open" : "closed"}`}>
       <div className="sidebar-card">
@@ -19,7 +26,7 @@ function Sidebar({ isOpen }) {
         </button>
       </div>
 
-      <div className="sidebar-card">
+      <div className="sidebar-card" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div className="sidebar-heading">
           <img src={fileIcon} alt="upload" />
           <div>
@@ -27,11 +34,8 @@ function Sidebar({ isOpen }) {
             <h3>파일 업로드</h3>
           </div>
         </div>
-        <div className="upload-box">
-          <label className="upload-area">
-            <span>파일을 드래그하거나 클릭하여 업로드</span>
-            <input type="file" multiple />
-          </label>
+        <div className="upload-box" style={{ flex: 1, border: 'none', background: 'transparent' }}>
+          <FileUploader onUpload={handleUpload} files={uploadedFiles} />
         </div>
       </div>
     </div>
