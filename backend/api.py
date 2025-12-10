@@ -113,11 +113,11 @@ async def chat(request: ChatRequest):
         response_msg = await llm.ainvoke(messages)
         response_text = response_msg.content
         
-        # 4. Update Chat History (Optional, for future context)
-        # current_history = context.get("chat_history", [])
-        # current_history.append({"role": "user", "content": request.query})
-        # current_history.append({"role": "assistant", "content": response_text})
-        # agent_manager.update_context("chat_history", current_history)
+        #4. Update Chat History (Optional, for future context)
+        current_history = context.get("chat_history", [])
+        current_history.append({"role": "user", "content": request.query})
+        current_history.append({"role": "assistant", "content": response_text})
+        agent_manager.update_context("chat_history", current_history)
         
         return {"response": response_text}
         
