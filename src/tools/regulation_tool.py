@@ -44,7 +44,7 @@ DOWNLOAD_DIR = os.path.join(DATA_DIR, "domestic")
 HISTORY_DIR = os.path.join(DATA_DIR, "crawling")
 HISTORY_FILE = os.path.join(HISTORY_DIR, "crawl_history.json")
 LAST_CRAWL_FILE = os.path.join(HISTORY_DIR, "last_crawl.json")
-VECTOR_DB_DIR = os.path.join(BASE_DIR, "vector_db", "all_esg")  # 벡터DB 저장 경로
+VECTOR_DB_DIR = os.path.join(BASE_DIR, "vector_db", "esg_all")  # 벡터DB 저장 경로
 
 # [변경] 모니터링 타겟 목록
 # law.go.kr은 별도 로직으로 처리하기 위해 type을 구분하거나 URL로 식별
