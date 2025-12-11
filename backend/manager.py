@@ -28,6 +28,11 @@ class AgentManager:
         persisted = kv_store.load_context() or {}
         # ④ Redis에 저장된 값이 있다면 기본 컨텍스트 위에 덮어써 복원
         default_context.update(persisted)
+        
+        # [Strict Session] 서버 시작 시 과거 업로드 파일 기록은 초기화함 (User Request)
+        # Persistent context should keep generic things, but files should be current session only.
+        default_context["uploaded_files"] = [] 
+        
         self.shared_context = default_context
         self._risk_orchestrator = RiskToolOrchestrator()
 

@@ -1,10 +1,13 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Body
 from fastapi.responses import StreamingResponse
-from typing import List, Optional
-from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field
 import shutil
 import os
 
+
+from src.tools.report_tool.report_tool import generate_report_from_query
+from src.tools.regulation_tool import _monitor_instance as regulation_monitor
 from backend.manager import agent_manager
 
 router = APIRouter()
@@ -151,6 +154,165 @@ async def chat(request: ChatRequest):
 async def chat_stream(request: ChatRequest):
     try:
         context = agent_manager.get_context()
+        
+        # 0. Intent Detection (LLM-based)
+        # Check if the user specifically wants to *generate* or *create* a report/checklist/document.
+        # Simple references (e.g. "read my report") should be False.
+        
+        class IntentAnalysis(BaseModel):
+            is_generation_request: bool = Field(description="True if user wants to CREATE/WRITE a report/checklist, False otherwise.")
+            
+        intent_system_prompt = """
+        Analyze the user's latest query to determine if they want to GENERATE a new report, checklist, or document.
+        
+        True:
+        - "Make a report about..."
+        - "Create a checklist for..."
+        - "Report please"
+        - "보고서 만들어줘"
+        - "체크리스트 작성해줘"
+        
+        False:
+        - "Summarize this report"
+        - "What is in the report?"
+        - "Refer to the uploaded file"
+        - "보고서 요약해줘"
+        - "내가 올린 파일 참고해"
+        """
+        
+        intent_llm = ChatOpenAI(model="gpt-4o", temperature=0)
+        structured_llm = intent_llm.with_structured_output(IntentAnalysis)
+        intent_result = await structured_llm.ainvoke([
+            SystemMessage(content=intent_system_prompt),
+            HumanMessage(content=request.query)
+        ])
+        
+        is_report_request = intent_result.is_generation_request
+        
+        if is_report_request:
+            # Generate Report Content using ReportTool (GRI Standard)
+            print(f"📄 Report generation intent detected for: {request.query}")
+            try:
+                # 1. Define Content Schema
+                class MaterialIssue(BaseModel):
+                    name: str = Field(description="Name of the material issue (e.g., 'Safety Training', 'Cardbon Emission')")
+                    impact: int = Field(description="Importance to stakeholders (0-100)")
+                    financial: int = Field(description="Financial impact (0-100)")
+                    isMaterial: bool = Field(description="Always set to True for key issues")
+
+                class ReportSection(BaseModel):
+                    title: str = Field(description="Section heading (e.g., 'Safety Management System', 'Carbon Reduction Plan')")
+                    content: str = Field(description="Section content in markdown (bullet points, tables, etc.)")
+
+                class ReportContentGen(BaseModel):
+                    company_name: str = Field(description="Exact Name of the company found in the [Uploaded File Content].")
+                    esg_strategy: str = Field(description="Main ESG strategy sentence from the file.")
+                    
+                    # Standard Fields (Optional if custom sections used)
+                    env_policy: Optional[str] = Field(description="Environmental policy summary (Standard K-ESG).")
+                    social_policy: Optional[str] = Field(description="Social policy summary (Standard K-ESG).")
+                    gov_structure: Optional[str] = Field(description="Governance structure summary (Standard K-ESG).")
+                    
+                    # Standard Materiality (Structured Table) - Optional
+                    material_issues: Optional[List[MaterialIssue]] = Field(default=None, description="List of key material issues. If user wants a custom format, leave this empty and use custom_sections.")
+                    
+                    # Dynamic Fields
+                    custom_sections: List[ReportSection] = Field(description="Dynamic sections for specific topics (e.g. if user asks for 'Safety Report', create sections like 'Risk Assessment', 'Safety Training').")
+
+                # 2. Extract context from uploaded files
+                uploaded_files = context.get("uploaded_files", [])
+                file_context_str = ""
+                
+                if uploaded_files:
+                    print(f"📂 Processing {len(uploaded_files)} uploaded files for context...")
+                    import pypdf
+                    
+                    # User Request: Use ALL files uploaded in the current session.
+                    # (History is cleared on server start via manager.py)
+                    for text_file in uploaded_files: 
+                        try:
+                            fname = text_file.get("filename")
+                            # Reconstruct absolute path
+                            fpath = os.path.join(UPLOAD_DIR, fname)
+                            
+                            content = ""
+                            if fname.lower().endswith(".pdf"):
+                                reader = pypdf.PdfReader(fpath)
+                                # Read ALL pages (User requested full context)
+                                content = "\n".join([utils.extract_text() for utils in reader.pages])
+                            else:
+                                with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                                    content = f.read()
+                            
+                            # Increase limit to 100k chars for GPT-4o
+                            file_context_str += f"\n=== File: {fname} ===\n{content[:100000]}\n" 
+                            print(f"   - Read {len(content)} chars from {fname}")
+                        except Exception as e:
+                            print(f"⚠️ Failed to read file {fname}: {e}")
+
+                # 3. Generate Content with LLM
+                content_system_prompt = f"""
+                You are an expert ESG consultant specializing in K-ESG (Korean ESG Guidelines).
+                The user wants a report about: "{request.query}"
+                
+                [Context]
+                - Industry: Construction (Default) or as implied by query.
+                - Guidelines: K-ESG Guideline v2.0.
+                
+                [Uploaded File Content]
+                {file_context_str if file_context_str else "No uploaded files found."}
+                
+                [Instructions]
+                Generate REALISTIC and SPECIFIC content based ONLY on the [Uploaded File Content] above.
+                
+                **STRUCTURE RULE**:
+                - IF the user asks for a **General/Standard Report**: Fill in `env_policy`, `social_policy`, `gov_structure`.
+                - IF the user asks for a **Specific Topic** (e.g. "Safety Report", "Carbon Report"): 
+                  - **IGNORE** the standard policy fields (leave them empty or brief).
+                  - **CREATE** detailed `custom_sections` relevant to that topic (e.g. "Risk Assessment", "Safety Training", "Accident Stats").
+                
+                1. **Company Name Priority**: 
+                   - **IF** the user mentioned a specific company name in the query (e.g., "Make a report for (주)SubCorp"), USE THAT NAME.
+                   - **ELSE**, extract the company name strictly from the file.
+                
+                2. **Strategy/Policy**: Summarize the actual strategies found in the text.
+                3. **Issues**: Identify 3-5 real material issues mentioned in the text.
+                
+                - Do NOT use GRI/SASB terms unless in the file.
+                - Focus on local regulations and K-ESG indicators.
+                - Do NOT use placeholders like "Input".
+                - Write in Korean.
+                """
+                
+                llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
+                structured_llm = llm.with_structured_output(ReportContentGen)
+                
+                print("🧠 Generating report content with LLM...")
+                generated_data = await structured_llm.ainvoke([
+                    SystemMessage(content=content_system_prompt),
+                    HumanMessage(content=f"Generate K-ESG content for: {request.query}")
+                ])
+                
+                report_data = generated_data.model_dump()
+                report_data['report_year'] = "2025" # Default year
+                
+                # 3. Create Report
+                report_content = generate_report_from_query(
+                    query=request.query, 
+                    extra_data=report_data,
+                    standard="K-ESG"
+                )
+                report_error = None
+            except Exception as e:
+                print(f"❌ Report generation failed: {e}")
+                import traceback
+                traceback.print_exc()
+                report_content = None
+                report_error = f"Report Generation Error: {str(e)}"
+        else:
+            report_content = None
+            report_error = None
+
         custom_result = await agent_manager.run_custom_agent(request.query)
         risk_assessment = context.get('risk_assessment')
         risk_summary = str(risk_assessment)[:500] + "..." if risk_assessment else "None"
@@ -192,7 +354,6 @@ async def chat_stream(request: ChatRequest):
         [Output Format - keep structured but flexible]
         ## 🎯 목표/제약
         - (1줄; 모르면 질문 1개)
-
         ## 📊 요약
         - 2~3문장 핵심
 
@@ -210,6 +371,10 @@ async def chat_stream(request: ChatRequest):
 
         If you don't know, say so and recommend running the appropriate agent (Regulation, Policy, Risk, Report).
         """
+        
+        # If report was generated, modify the system prompt or the conversational response to reflect that.
+        if report_content:
+             system_prompt += "\n[System Note]\nA report has just been generated and displayed to the user. Briefly mention this in your response (e.g., '요청하신대로 보고서를 생성하여 화면에 띄워드렸습니다.')."
 
         llm = ChatOpenAI(model="gpt-4o", temperature=0.5, streaming=True)
         
@@ -220,6 +385,15 @@ async def chat_stream(request: ChatRequest):
 
         async def event_generator():
             try:
+                # 1. If report generated, send it first
+                if report_content:
+                    yield f"data: {json.dumps({'report': report_content})}\n\n"
+                
+                # 1b. If report failed, send error
+                if report_error:
+                    yield f"data: {json.dumps({'error': report_error})}\n\n"
+                
+                # 2. Stream conversational response
                 async for chunk in llm.astream(messages):
                     token = chunk.content or ""
                     if token:
@@ -230,4 +404,7 @@ async def chat_stream(request: ChatRequest):
 
         return StreamingResponse(event_generator(), media_type="text/event-stream")
     except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        print(f"❌ [API Error] {exc}")
         raise HTTPException(status_code=500, detail=str(exc))

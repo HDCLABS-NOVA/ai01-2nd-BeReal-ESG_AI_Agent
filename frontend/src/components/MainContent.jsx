@@ -1,4 +1,7 @@
 import React, { useState } from "react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import html2pdf from "html2pdf.js"
 import logo from "/B_clean2.png"
 import "./MainContent.css"
 
@@ -39,8 +42,27 @@ function MainContent() {
     }
   }, [])
 
-  const handleSave = (reportTitle) => {
-    alert(`📄 "${reportTitle}" 보고서를 저장했습니다.`)
+  const handleDownloadPDF = (report) => {
+    const element = document.getElementById(`report-content-${report.id}`)
+    if (!element) {
+      alert("다운로드할 내용을 찾을 수 없습니다.")
+      return
+    }
+
+    const opt = {
+      margin: 10,
+      filename: `${report.title}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }
+
+    html2pdf().set(opt).from(element).save()
+      .then(() => alert(`📄 "${report.title}" PDF 다운로드가 시작되었습니다.`))
+      .catch((err) => {
+        console.error(err)
+        alert("PDF 생성 중 오류가 발생했습니다.")
+      })
   }
 
   return (
@@ -77,15 +99,25 @@ function MainContent() {
             <div className="report-box" key={report.id}>
               <div className="report-header">
                 <h3>{report.title}</h3>
-                <button className="save-btn" onClick={() => handleSave(report.title)}>
-                  저장
+                <button className="save-btn" onClick={() => handleDownloadPDF(report)}>
+                  PDF 다운로드
                 </button>
               </div>
-              <ul>
-                {report.items.map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
+              <div id={`report-content-${report.id}`}>
+                {report.content ? (
+                  <div className="report-markdown">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {report.content}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <ul>
+                    {report.items && report.items.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           ))}
       </div>
