@@ -81,6 +81,12 @@
   margin-bottom: 0.8rem;
 }
 
+.report-header h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1f2a56;
+}
+
 .save-btn {
   background-color: #5ba1ff;
   color: white;
@@ -91,6 +97,86 @@
 }
 
 .report-box ul {
-  padding-left: 1.2rem;
+  padding-left: 1.5rem;
   color: #3c4568;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.report-box li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+/* Markdown Content Styling */
+.report-markdown {
+  font-size: 1.15rem;
+  line-height: 1.8;
+  color: #2d3748;
+}
+
+.report-markdown h1,
+.report-markdown h2,
+.report-markdown h3 {
+  color: #1a202c;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+.report-markdown h1 {
+  font-size: 1.8rem;
+}
+
+.report-markdown h2 {
+  font-size: 1.5rem;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.5rem;
+}
+
+.report-markdown h3 {
+  font-size: 1.3rem;
+}
+
+.report-markdown p {
+  margin-bottom: 1.2rem;
+}
+
+.report-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 1rem;
+}
+
+.report-markdown th,
+.report-markdown td {
+  border: 1px solid #cbd5e0;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.report-markdown th {
+  background-color: #f7fafc;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.report-markdown tr:nth-child(even) {
+  background-color: #f8fafc;
+}
+
+/* Checklist Styling */
+.report-markdown li.task-list-item {
+  list-style-type: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.report-markdown input[type="checkbox"] {
+  margin-top: 0.45rem;
+  /* Optical alignment for 1.15rem text */
+  transform: scale(1.2);
+  cursor: pointer;
 }

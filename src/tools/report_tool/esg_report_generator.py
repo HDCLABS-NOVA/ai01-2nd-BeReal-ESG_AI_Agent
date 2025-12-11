@@ -19,10 +19,10 @@ from typing import Dict, List, Any, Set, Optional
 # ============================================================================
 
 GRI_1_PRINCIPLES = {
-    "accuracy": "정확성", "balance": "균형", "clarity": "명확성",
-    "comparability": "비교가능성", "completeness": "완전성",
-    "sustainability_context": "지속가능성 맥락", "timeliness": "적시성",
-    "verifiability": "검증가능성"
+    "accuracy": "✅ 정확성", "balance": "⚖️ 균형", "clarity": "🔍 명확성",
+    "comparability": "📊 비교가능성", "completeness": "📦 완전성",
+    "sustainability_context": "🌍 지속가능성 맥락", "timeliness": "⏱️ 적시성",
+    "verifiability": "🛡️ 검증가능성"
 }
 
 GRI_2_DISCLOSURES = {
@@ -144,7 +144,7 @@ class GRIMapper:
                 if not codes:
                     continue
                 series = "200" if cat == "경제" else ("300" if cat == "환경" else "400")
-                md += f"#### {cat} ({series} Series)\n"
+                md += f"#### 🔹 {cat} ({series} Series)\n\n"
                 md += "| GRI | 공시 | 지표 |\n|-----|------|------|\n"
                 for code in codes:
                     info = GRI_TOPICS[code]
@@ -209,9 +209,9 @@ def generate_esg_report(data: Dict[str, Any], standard: str = "GRI") -> str:
     
     # About (Always show)
     gri_tag = "**[GRI 2-1, 2-2, 2-3]**\n" if standard == "GRI" else ""
-    md += f"## About This Report\n{gri_tag}\n"
-    md += f"**기간:** {year}.1.1 ~ {year}.12.31\n"
-    md += f"**범위:** {company} 본사, 자회사, 1~2차 협력사\n"
+    md += f"## 📘 About This Report\n\n{gri_tag}\n"
+    md += f"- **📅 기간:** {year}.1.1 ~ {year}.12.31\n"
+    md += f"- **🏢 범위:** {company} 본사, 자회사, 1~2차 협력사\n"
     
     if standard == "GRI":
         md += "**기준:** GRI 2021, K-ESG, ISO 26000, UN SDGs, SASB, TCFD, CSRD\n"
@@ -221,11 +221,11 @@ def generate_esg_report(data: Dict[str, Any], standard: str = "GRI") -> str:
     
     # Highlights (show if data exists)
     if env_data or safety_data:
-        md += "## ESG Highlights\n"
+        md += "## 🏆 ESG Highlights\n\n"
         md += f"| 분야 | 2023 | 2024 | {year} |\n|------|------|------|------|\n"
-        md += f"| 환경(GHG) | {_val(env_data,'2023')} | {_val(env_data,'2024')} | {_val(env_data,'2025')} |\n"
-        md += f"| 사회(LTIR) | {_val(safety_data,'2023')} | {_val(safety_data,'2024')} | {_val(safety_data,'2025')} |\n"
-        md += "| 지배구조 | - | - | - |\n\n"
+        md += f"| 🌿 환경(GHG) | {_val(env_data,'2023')} | {_val(env_data,'2024')} | {_val(env_data,'2025')} |\n"
+        md += f"| 👷 사회(LTIR) | {_val(safety_data,'2023')} | {_val(safety_data,'2024')} | {_val(safety_data,'2025')} |\n"
+        md += "| 🏛️ 지배구조 | - | - | - |\n\n"
     
     # CEO Message (Removed as per user request)
     # if has_data(ceo):
@@ -233,21 +233,21 @@ def generate_esg_report(data: Dict[str, Any], standard: str = "GRI") -> str:
     #     md += f"## CEO Message\n{tag}{ceo}\n\n"
     
     # Company Overview
-    md += "## Company Overview\n"
-    md += f"- **회사명:** {company}\n- **업종:** {industry}\n"
+    md += "## 🏢 Company Overview\n\n"
+    md += f"- **회사명:** {company}\n- **업종:** {industry}\n\n"
     if has_data(strategy):
-        md += f"### 전략\n{strategy}\n\n"
+        md += f"### 🚀 전략\n\n{strategy}\n\n"
     
     # Stakeholder
     # Only show generic stakeholder table if it's a standard report (no custom sections)
     custom_sections = data.get("custom_sections", [])
     
     if not custom_sections:
-        md += "## ESG & Stakeholder Engagement\n"
+        md += "## 🤝 ESG & Stakeholder Engagement\n\n"
         md += "이해관계자 소통 채널 운영 현황\n\n"
         md += "| 이해관계자 | 관심사 | 채널 |\n|------------|--------|------|\n"
-        md += "| 고객 | 안전·품질 | VOC |\n| 임직원 | 안전·교육 | 교육 |\n"
-        md += "| 협력사 | ESG | 포털 |\n| 투자자 | 공시 | IR |\n| 지역사회 | 환경 | 봉사 |\n\n"
+        md += "| 👥 고객 | 안전·품질 | VOC |\n| 👷 임직원 | 안전·교육 | 교육 |\n"
+        md += "| 🏗️ 협력사 | ESG | 포털 |\n| 💰 투자자 | 공시 | IR |\n| 🏙️ 지역사회 | 환경 | 봉사 |\n\n"
     
     # Materiality (Only if issues exist)
     mapper = GRIMapper()
@@ -256,8 +256,8 @@ def generate_esg_report(data: Dict[str, Any], standard: str = "GRI") -> str:
         mapper.analyze_issues(issues) # Run mapping
     
     # Render Materiality
-    md += "## Double Materiality Assessment\n"
-    md += f"### 주요 이슈 도출 ({len(issues)}건)\n"
+    md += "## 📌 Double Materiality Assessment\n\n"
+    md += f"### 주요 이슈 도출 ({len(issues)}건)\n\n"
     md += "| 이슈 | 중요도(%) | 재무영향(%) | 관련 영역 |\n|------|---------|---------|-----|\n"
     for issue in issues:
         ref_str = "-"
@@ -289,34 +289,34 @@ def generate_esg_report(data: Dict[str, Any], standard: str = "GRI") -> str:
         for section in custom_sections:
             title = section.get("title", "Section")
             content = section.get("content", "")
-            md += f"## {title}\n{content}\n\n"
+            md += f"## 🚩 {title}\n\n{content}\n\n"
             
     # Standard Sections (Environmental, Social, Governance)
     # These will naturally be skipped if the LLM left them empty as instructed.
     
     # Environmental
     if has_data(env_pol) or has_data(climate) or env_data:
-        md += "## Environmental Performance\n"
-        if has_data(env_pol): md += f"### Policy\n{env_pol}\n\n"
-        if has_data(climate): md += f"### Climate Action\n{climate}\n\n"
+        md += "## 🌿 Environmental Performance\n\n"
+        if has_data(env_pol): md += f"### 📜 Policy\n\n{env_pol}\n\n"
+        if has_data(climate): md += f"### 🌍 Climate Action\n\n{climate}\n\n"
         if env_data:
-            md += "### Key Indicators\n"
+            md += "### 📉 Key Indicators\n\n"
             for r in env_data:
                 md += f"- {r.get('year')}: {r.get('value')}\n"
             md += "\n"
 
     # Social
     if has_data(social_pol) or has_data(safety) or safety_data or has_data(supply_pol):
-        md += "## Social Performance\n"
-        if has_data(social_pol): md += f"### Human Rights\n{social_pol}\n\n"
-        if has_data(safety): md += f"### Safety Management\n{safety}\n\n"
+        md += "## 👥 Social Performance\n\n"
+        if has_data(social_pol): md += f"### ⚖️ Human Rights\n\n{social_pol}\n\n"
+        if has_data(safety): md += f"### 🦺 Safety Management\n\n{safety}\n\n"
         if safety_data:
-            md += "#### Safety KPIs\n"
+            md += "#### 📊 Safety KPIs\n\n"
             for r in safety_data:
                 md += f"- {r.get('year')}: {r.get('value')}\n"
             md += "\n"
         if has_data(supply_pol):
-            md += f"### Supply Chain\n{supply_pol}\n\n"
+            md += f"### 🏗️ Supply Chain\n\n{supply_pol}\n\n"
             if supply_risk:
                 md += "| 카테고리 | 리스크 | 조치 | 현황 |\n|----------|--------|------|------|\n"
                 for r in supply_risk:
@@ -325,10 +325,10 @@ def generate_esg_report(data: Dict[str, Any], standard: str = "GRI") -> str:
 
     # Governance
     if has_data(gov) or has_data(ethics):
-        md += "## Governance\n"
-        if has_data(gov): md += f"### Structure\n{gov}\n\n"
+        md += "## ⚖️ Governance\n\n"
+        if has_data(gov): md += f"### 🏛️ Structure\n\n{gov}\n\n"
         # Committees table removed as it was hardcoded.
-        if has_data(ethics): md += f"### Ethics\n{ethics}\n\n"
+        if has_data(ethics): md += f"### 📜 Ethics\n\n{ethics}\n\n"
 
     # Appendices
     if data.get("esg_data_details") or standard == "GRI":
