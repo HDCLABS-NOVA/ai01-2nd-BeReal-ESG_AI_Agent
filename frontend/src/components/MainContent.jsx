@@ -1,40 +1,21 @@
 import React, { useState } from "react"
 import logo from "/B_clean2.png"
 import "./MainContent.css"
+import { GUIDE_CONVERSATION_ID, GUIDE_REPORTS } from "../constants/conversations"
 
-function MainContent() {
-  const [reports, setReports] = useState([
-    {
-      id: 1,
-      title: "2025 건설사 협력사 ESG 체크리스트",
-      items: ["환경 관리 체계 점검", "협력사 내부 인권 보호 지침", "공급망 탄소 배출량 관리"],
-    },
-  ])
+function MainContent({ activeConversationId }) {
+  const [reports, setReports] = useState([])
   const [search, setSearch] = useState("")
+  const isGuideMode = activeConversationId === GUIDE_CONVERSATION_ID
 
   React.useEffect(() => {
-    const handler = () => {
-      setReports([
-        {
-          id: 99,
-          title: "샘플 체크리스트",
-          items: [
-            "문서 ①: ESG 리스크 인식 / 협력사 교육",
-            "문서 ②: 원청 요구사항 요약",
-            "문서 ③: 결과물 저장 안내",
-          ],
-        },
-      ])
-    }
     const reportHandler = (e) => {
       const newReport = e.detail
       setReports(prev => [newReport, ...prev])
     }
 
-    window.addEventListener("showSample", handler)
     window.addEventListener("newReport", reportHandler)
     return () => {
-      window.removeEventListener("showSample", handler)
       window.removeEventListener("newReport", reportHandler)
     }
   }, [])
@@ -71,7 +52,7 @@ function MainContent() {
       </div>
 
       <div className="report-list">
-        {reports
+        {(isGuideMode ? GUIDE_REPORTS : reports)
           .filter((report) => report.title.includes(search))
           .map((report) => (
             <div className="report-box" key={report.id}>
