@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react'
-import fileIcon from '../assets/file_icon.png'
+import { useState, useRef } from "react"
+import fileIcon from "../assets/file_icon.png"
 
-export default function FileUploader({ onUpload, files }) {
+export default function FileUploader({ conversationId, files = [], onUploadComplete }) {
     const [isDragging, setIsDragging] = useState(false)
     const fileInputRef = useRef(null)
 
@@ -23,29 +23,34 @@ export default function FileUploader({ onUpload, files }) {
 
     const handleFileSelect = async (e) => {
         const selectedFiles = Array.from(e.target.files)
-        e.target.value = "" // Reset input to allow selecting the same file again
+        e.target.value = ""
         await uploadFiles(selectedFiles)
     }
 
     const uploadFiles = async (fileList) => {
-        // Optimistic UI Update: Show files immediately
-        const newFiles = fileList.map(f => ({ name: f.name, size: f.size }))
-        onUpload(newFiles)
+        if (!conversationId) {
+            alert("먼저 대화를 선택하거나 생성하세요.")
+            return
+        }
 
         for (const file of fileList) {
             const formData = new FormData()
-            formData.append('file', file)
+            formData.append("conversation_id", conversationId)
+            formData.append("file", file)
 
             try {
-                const response = await fetch('http://localhost:8000/api/upload', {
-                    method: 'POST',
+                const response = await fetch("http://localhost:8000/api/upload", {
+                    method: "POST",
                     body: formData,
                 })
-                if (!response.ok) throw new Error('Upload failed')
+                if (!response.ok) throw new Error("Upload failed")
             } catch (error) {
-                console.error('Error uploading file:', error)
-                // Optional: You could update state to show error status here
+                console.error("Error uploading file:", error)
             }
+        }
+
+        if (onUploadComplete) {
+            onUploadComplete()
         }
     }
 
@@ -53,8 +58,8 @@ export default function FileUploader({ onUpload, files }) {
         <div className="flex flex-col h-full text-slate-900">
             <div
                 className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${isDragging
-                    ? 'bg-purple-200/30 border-purple-400 shadow-glow'
-                    : 'bg-white/70 border-white/80 hover:border-moonlightPurple/40'}
+                    ? "bg-purple-200/30 border-purple-400 shadow-glow"
+                    : "bg-white/70 border-white/80 hover:border-moonlightPurple/40"}
                     `}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -78,12 +83,17 @@ export default function FileUploader({ onUpload, files }) {
             <div className="mt-6 flex-1 overflow-y-auto">
                 <h3 className="font-semibold text-slate-900 mb-2">Uploaded Files</h3>
                 <ul className="space-y-2">
-                    {files.map((file, index) => (
-                        <li key={index} className="bg-white/80 p-2 rounded text-sm flex justify-between items-center shadow-sm">
-                            <span className="truncate">{file.name}</span>
-                            <span className="text-slate-500 text-xs">{(file.size / 1024).toFixed(1)} KB</span>
+                    {files.map((file) => (
+                        <li key={file.id || file.filename} className="bg-white/80 p-2 rounded text-sm flex justify-between items-center shadow-sm">
+                            <span className="truncate">{file.filename || file.name}</span>
+                            <span className="text-slate-500 text-xs">
+                                {file.size_bytes ? (file.size_bytes / 1024).toFixed(1) : file.size ? (file.size / 1024).toFixed(1) : "0.0"} KB
+                            </span>
                         </li>
                     ))}
+                    {files.length === 0 && (
+                        <li className="text-slate-500 text-sm">업로드된 파일이 없습니다.</li>
+                    )}
                 </ul>
             </div>
         </div>

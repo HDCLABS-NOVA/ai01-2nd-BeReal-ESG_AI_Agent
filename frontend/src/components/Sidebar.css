@@ -53,6 +53,82 @@
   color: #1f2a56;
 }
 
+.new-chat-btn {
+  background: linear-gradient(135deg, #6d83ff, #9b7bff);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: opacity 0.2s ease;
+  cursor: pointer;
+}
+
+.new-chat-btn:hover {
+  opacity: 0.85;
+}
+
+.chat-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.chat-history-item {
+  text-align: left;
+  border: 1px solid rgba(126, 137, 214, 0.35);
+  border-radius: 14px;
+  padding: 0.6rem 0.75rem;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chat-history-item.active {
+  border-color: #5e6bff;
+  box-shadow: 0 10px 30px rgba(101, 114, 255, 0.25);
+}
+
+.chat-history-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #202a64;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chat-history-delete {
+  border: none;
+  background: transparent;
+  color: #9aa2d0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.1rem 0.3rem;
+  border-radius: 6px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.chat-history-delete:hover {
+  background: rgba(154, 162, 208, 0.2);
+  color: #5e6bff;
+}
+
+.chat-history-empty {
+  font-size: 0.9rem;
+  color: #7b84b8;
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
 .upload-box input {
   display: none;
 }
