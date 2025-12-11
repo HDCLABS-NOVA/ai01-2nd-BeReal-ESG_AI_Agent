@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 import shutil
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -118,6 +119,13 @@ async def list_conversation_files(conversation_id: str):
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
     return agent_manager.list_conversation_files(conversation_id)
+
+@router.get("/conversations/{conversation_id}/reports")
+async def list_conversation_reports(conversation_id: str):
+    conversation = agent_manager.get_conversation(conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return agent_manager.list_conversation_reports(conversation_id)
 
 @router.delete("/conversations/{conversation_id}")
 async def delete_conversation(conversation_id: str):
@@ -355,8 +363,7 @@ async def chat_stream(request: ChatRequest):
                 
                 [Context]
                 - Industry: Construction (Default)
-                - K-ESG Guideline v2.0
-                
+                - Guidelines: K-ESG Guideline v2.0.                
                 [Uploaded File Content]
                 {file_context_str if file_context_str else "No uploaded files found."}
                 
@@ -446,16 +453,54 @@ async def chat_stream(request: ChatRequest):
         async def event_generator():
             try:
                 if report_content:
+                     # Save the report to the conversation
+                    try:
+                        report_to_save = {
+                            "id": str(int(datetime.now().timestamp() * 1000)), # Use timestamp ID to match frontend convention
+                            "title": request.query[:20] + ("..." if len(request.query) > 20 else ""), # Simple title derivation
+                            "content": report_content,
+                            "items": [], # Populate if structured data available, else empty
+                            "created_at": datetime.now().isoformat()
+                        }
+                        agent_manager.add_conversation_report(conversation_id, report_to_save)
+                    except Exception as e:
+                        print(f"Failed to save report: {e}")
+
                     yield f"data: {json.dumps({'report': report_content})}\n\n"
+                    
+                    # LLM generates a short confirmation
+                    # Update system prompt to enforce brevity for this case
+                    confirmation_system_prompt = system_prompt + """
+                    
+                    [IMPORTANT]
+                    A report has just been generated and displayed to the user.
+                    Do NOT summarize the report content.
+                    Do NOT repeat the details.
+                    Simply say something like "Reqeuested report has been generated." in a friendly Korean tone.
+                    Keep it under 1 sentence.
+                    """
+                    
+                    # We need a new messages list with this updated prompt
+                    confirmation_messages = [
+                        SystemMessage(content=confirmation_system_prompt),
+                        HumanMessage(content=request.query)
+                    ]
+
+                    async for chunk in llm.astream(confirmation_messages):
+                        token = chunk.content or ""
+                        if token:
+                            assistant_buffer["text"] += token
+                            yield f"data: {json.dumps({'token': token})}\n\n"
                 
-                if report_error:
-                    yield f"data: {json.dumps({'error': report_error})}\n\n"
-                
-                async for chunk in llm.astream(messages):
-                    token = chunk.content or ""
-                    if token:
-                        assistant_buffer["text"] += token
-                        yield f"data: {json.dumps({'token': token})}\n\n"
+                else:
+                    if report_error:
+                        yield f"data: {json.dumps({'error': report_error})}\n\n"
+                    
+                    async for chunk in llm.astream(messages):
+                        token = chunk.content or ""
+                        if token:
+                            assistant_buffer["text"] += token
+                            yield f"data: {json.dumps({'token': token})}\n\n"
                 
                 agent_manager.append_conversation_message(
                     conversation_id,

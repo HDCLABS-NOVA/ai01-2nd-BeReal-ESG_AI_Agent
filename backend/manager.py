@@ -91,6 +91,7 @@ class AgentManager:
             "title": title or self.DEFAULT_TITLE,
             "messages": [],
             "files": [],
+            "reports": [],
             "created_at": now,
             "updated_at": now,
         }
@@ -179,6 +180,29 @@ class AgentManager:
         self.shared_context["uploaded_files"] = uploaded
         conversation["updated_at"] = self._now()
         self.update_context("conversations", conversations)
+
+    def add_conversation_report(self, conversation_id: str, report_data: Dict[str, Any]):
+        conversations = self._get_conversations()
+        conversation = conversations.get(conversation_id)
+        if conversation is None:
+            raise KeyError(f"Conversation not found: {conversation_id}")
+        
+        # report_data expected to have id, title, content, creates_at etc. 
+        # If ID is missing, generate one
+        if "id" not in report_data:
+            report_data["id"] = str(uuid.uuid4())
+        if "created_at" not in report_data:
+            report_data["created_at"] = self._now()
+            
+        conversation.setdefault("reports", []).append(report_data)
+        conversation["updated_at"] = self._now()
+        self.update_context("conversations", conversations)
+
+    def list_conversation_reports(self, conversation_id: str) -> List[Dict[str, Any]]:
+        conversation = self.get_conversation(conversation_id)
+        if not conversation:
+            return []
+        return conversation.get("reports", [])
 
     def _guess_conversation_title(self, content: str) -> str:
         """LLM을 사용해 대화 제목을 생성하고 실패 시 간단 요약으로 대체"""
