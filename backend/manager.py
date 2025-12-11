@@ -43,6 +43,11 @@ class AgentManager:
         persisted = kv_store.load_context() or {}
         # ④ Redis에 저장된 값이 있다면 기본 컨텍스트 위에 덮어써 복원
         default_context.update(persisted)
+        
+        # [Strict Session] 서버 시작 시 과거 업로드 파일 기록은 초기화함 (User Request)
+        # Persistent context should keep generic things, but files should be current session only.
+        default_context["uploaded_files"] = [] 
+        
         self.shared_context = default_context
         self._risk_orchestrator = RiskToolOrchestrator()
         CONVERSATION_VECTOR_DIR.mkdir(parents=True, exist_ok=True)
@@ -98,6 +103,7 @@ class AgentManager:
             "title": title or self.DEFAULT_TITLE,
             "messages": [],
             "files": [],
+            "reports": [],
             "created_at": now,
             "updated_at": now,
         }
@@ -191,6 +197,29 @@ class AgentManager:
         except Exception as exc:  # pragma: no cover - 임베딩 실패 시 로그만 남김
             LOGGER.warning("대화방 임베딩 추가 실패(%s): %s", conversation_id, exc)
         self.update_context("conversations", conversations)
+
+    def add_conversation_report(self, conversation_id: str, report_data: Dict[str, Any]):
+        conversations = self._get_conversations()
+        conversation = conversations.get(conversation_id)
+        if conversation is None:
+            raise KeyError(f"Conversation not found: {conversation_id}")
+        
+        # report_data expected to have id, title, content, creates_at etc. 
+        # If ID is missing, generate one
+        if "id" not in report_data:
+            report_data["id"] = str(uuid.uuid4())
+        if "created_at" not in report_data:
+            report_data["created_at"] = self._now()
+            
+        conversation.setdefault("reports", []).append(report_data)
+        conversation["updated_at"] = self._now()
+        self.update_context("conversations", conversations)
+
+    def list_conversation_reports(self, conversation_id: str) -> List[Dict[str, Any]]:
+        conversation = self.get_conversation(conversation_id)
+        if not conversation:
+            return []
+        return conversation.get("reports", [])
 
     def _guess_conversation_title(self, content: str) -> str:
         """LLM을 사용해 대화 제목을 생성하고 실패 시 간단 요약으로 대체"""

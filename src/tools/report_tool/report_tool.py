@@ -302,7 +302,7 @@ class ReportTool:
         return tools
 
     def create_report(self, user_inputs: Dict[str, Any] = None, 
-                     report_path: Optional[str] = None) -> str:
+                     report_path: Optional[str] = None, standard: str = "GRI") -> str:
         """ESG 보고서 생성 (HTML)
         
         Parameters
@@ -311,6 +311,8 @@ class ReportTool:
             추가 데이터 (기존 데이터와 병합됨)
         report_path : str, optional
             저장 경로 (.html 추천, .pdf 확장자도 지원하지만 HTML로 저장됨)
+        standard : str, optional
+            보고서 생성에 사용할 표준 (기본값: "GRI")
         
         Returns
         -------
@@ -354,7 +356,7 @@ class ReportTool:
         
         # HTML 보고서 생성
         try:
-            report_html = generate_esg_report(data)
+            report_md = generate_esg_report(data, standard=standard)
         except Exception as e:
             print(f"[Error] 보고서 생성 중 오류 발생: {e}")
             raise
@@ -373,7 +375,7 @@ class ReportTool:
                 html_path = report_path.replace(".pdf", ".html")
                 try:
                     with open(html_path, "w", encoding="utf-8") as f:
-                        f.write(report_html)
+                        f.write(report_md)
                     print(f"[Success] HTML 원본 저장: {html_path}")
                 except Exception as e:
                     print(f"[Error] 파일 저장 실패: {e}")
@@ -389,17 +391,17 @@ class ReportTool:
                     os.makedirs(os.path.dirname(report_path) or ".", exist_ok=True)
                     
                     with open(report_path, "w", encoding="utf-8") as f:
-                        f.write(report_html)
+                        f.write(report_md)
                     print(f"[Success] HTML 리포트 생성 완료: {report_path}")
-                    print(f"          파일 크기: {len(report_html):,} bytes")
+                    print(f"          파일 크기: {len(report_md):,} bytes")
                 except Exception as e:
                     print(f"[Error] 파일 저장 실패: {e}")
                     raise
         
-        return report_html
+        return report_md
 
 
-def generate_report_from_query(query: str, audience: Optional[str] = None, extra_data: Optional[Dict[str, Any]] = None) -> str:
+def generate_report_from_query(query: str, audience: Optional[str] = None, extra_data: Optional[Dict[str, Any]] = None, standard: str = "GRI") -> str:
     """최소 필수 필드를 채워 HTML ESG 보고서를 생성한다."""
 
     tool = ReportTool()
@@ -416,4 +418,4 @@ def generate_report_from_query(query: str, audience: Optional[str] = None, extra
     tool.store_data(base)
     if extra_data:
         tool.store_data(extra_data)
-    return tool.create_report()
+    return tool.create_report(standard=standard)

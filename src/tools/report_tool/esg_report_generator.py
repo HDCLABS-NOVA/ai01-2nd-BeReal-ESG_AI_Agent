@@ -19,10 +19,10 @@ from typing import Dict, List, Any, Set, Optional
 # ============================================================================
 
 GRI_1_PRINCIPLES = {
-    "accuracy": "정확성", "balance": "균형", "clarity": "명확성",
-    "comparability": "비교가능성", "completeness": "완전성",
-    "sustainability_context": "지속가능성 맥락", "timeliness": "적시성",
-    "verifiability": "검증가능성"
+    "accuracy": "✅ 정확성", "balance": "⚖️ 균형", "clarity": "🔍 명확성",
+    "comparability": "📊 비교가능성", "completeness": "📦 완전성",
+    "sustainability_context": "🌍 지속가능성 맥락", "timeliness": "⏱️ 적시성",
+    "verifiability": "🛡️ 검증가능성"
 }
 
 GRI_2_DISCLOSURES = {
@@ -144,7 +144,7 @@ class GRIMapper:
                 if not codes:
                     continue
                 series = "200" if cat == "경제" else ("300" if cat == "환경" else "400")
-                md += f"#### {cat} ({series} Series)\n"
+                md += f"#### 🔹 {cat} ({series} Series)\n\n"
                 md += "| GRI | 공시 | 지표 |\n|-----|------|------|\n"
                 for code in codes:
                     info = GRI_TOPICS[code]
@@ -172,171 +172,182 @@ def _tag(tags: List[str]) -> str:
     return f"**[{', '.join(sorted(set(tags)))}]**" if tags else ""
 
 
-def generate_esg_report(data: Dict[str, Any]) -> str:
-    """ESG 보고서 생성
+def generate_esg_report(data: Dict[str, Any], standard: str = "GRI") -> str:
+    """ESG 보고서 생성 (조건부 렌더링 적용)"""
     
-    필수: company_name, report_year, material_issues
-    권장: ceo_message, esg_strategy, env_policy, social_policy, gov_structure
-    """
+    def has_data(val: Any) -> bool:
+        if not val: return False
+        if isinstance(val, str) and "입력" in val: return False
+        if isinstance(val, list) and not val: return False
+        return True
+
     # 데이터 추출
     company = data.get("company_name", "회사명")
     year = data.get("report_year", "연도")
     industry = data.get("industry", "Construction")
-    ceo = data.get("ceo_message", "CEO 메시지 입력")
-    strategy = data.get("esg_strategy", "ESG 전략 입력")
-    env_pol = data.get("env_policy", "환경 정책 입력")
-    climate = data.get("climate_action", "기후변화 대응 입력")
+    ceo = data.get("ceo_message", "")
+    strategy = data.get("esg_strategy", "")
+    
+    env_pol = data.get("env_policy", "")
+    climate = data.get("climate_action", "")
     env_data = data.get("env_chart_data", [])
-    social_pol = data.get("social_policy", "사회 정책 입력")
-    safety = data.get("safety_management", "안전 활동 입력")
+    
+    social_pol = data.get("social_policy", "")
+    safety = data.get("safety_management", "")
     safety_data = data.get("safety_chart_data", [])
-    supply_pol = data.get("supply_chain_policy", "공급망 정책 입력")
+    supply_pol = data.get("supply_chain_policy", "")
     supply_risk = data.get("supply_chain_risk", [])
-    gov = data.get("gov_structure", "지배구조 입력")
-    ethics = data.get("ethics", "윤리경영 입력")
     
-    # GRI 매핑
-    mapper = GRIMapper()
-    issues = data.get("material_issues", [])
-    mapper.analyze_issues(issues)
+    gov = data.get("gov_structure", "")
+    ethics = data.get("ethics", "")
     
-    # 보고서
-    md = f"# {company} {year} 지속가능경영보고서\n\n"
+    # ---------------------------------------------------------
+    # 보고서 시작
+    # ---------------------------------------------------------
+    title_suffix = "지속가능경영보고서" if standard == "GRI" else "K-ESG 가이드라인 보고서"
+    md = f"# {company} {year} {title_suffix}\n\n"
     
-    # About
-    md += "## About This Report\n**[GRI 2-1, 2-2, 2-3]**\n\n"
-    md += f"**기간:** {year}.1.1 ~ {year}.12.31\n"
-    md += f"**범위:** {company} 본사, 자회사, 1~2차 협력사\n"
-    md += "**기준:** GRI 2021, K-ESG, ISO 26000, UN SDGs, SASB, TCFD, CSRD\n"
-    md += "**GRI 1:** 8가지 보고 원칙 준수\n\n"
+    # About (Always show)
+    gri_tag = "**[GRI 2-1, 2-2, 2-3]**\n" if standard == "GRI" else ""
+    md += f"## 📘 About This Report\n\n{gri_tag}\n"
+    md += f"- **📅 기간:** {year}.1.1 ~ {year}.12.31\n"
+    md += f"- **🏢 범위:** {company} 본사, 자회사, 1~2차 협력사\n"
     
-    # Highlights
-    md += "## ESG Highlights\n"
-    md += f"| 분야 | 2023 | 2024 | {year} |\n|------|------|------|------|\n"
-    md += f"| 환경(GHG) | {_val(env_data,'2023')} | {_val(env_data,'2024')} | {_val(env_data,'2025')} |\n"
-    md += f"| 사회(LTIR) | {_val(safety_data,'2023')} | {_val(safety_data,'2024')} | {_val(safety_data,'2025')} |\n"
-    md += "| 지배구조 | - | - | - |\n\n"
+    if standard == "GRI":
+        md += "**기준:** GRI 2021, K-ESG, ISO 26000, UN SDGs, SASB, TCFD, CSRD\n"
+    else:
+        md += "**기준:** K-ESG 가이드라인 v2.0\n"
+    md += "\n"
     
-    # CEO
-    md += f"## CEO Message\n**[GRI 2-22]**\n\n{ceo}\n\n"
+    # Highlights (show if data exists)
+    if env_data or safety_data:
+        md += "## 🏆 ESG Highlights\n\n"
+        md += f"| 분야 | 2023 | 2024 | {year} |\n|------|------|------|------|\n"
+        md += f"| 🌿 환경(GHG) | {_val(env_data,'2023')} | {_val(env_data,'2024')} | {_val(env_data,'2025')} |\n"
+        md += f"| 👷 사회(LTIR) | {_val(safety_data,'2023')} | {_val(safety_data,'2024')} | {_val(safety_data,'2025')} |\n"
+        md += "| 🏛️ 지배구조 | - | - | - |\n\n"
     
-    # Company
-    md += "## Company Overview\n**[GRI 2-1, GRI 201]**\n\n"
-    md += f"- **회사명:** {company}\n- **업종:** {industry}\n- **본사:** (입력)\n"
-    md += f"### 전략\n{strategy}\n\n"
+    # CEO Message (Removed as per user request)
+    # if has_data(ceo):
+    #     tag = "**[GRI 2-22]**\n\n" if standard == "GRI" else ""
+    #     md += f"## CEO Message\n{tag}{ceo}\n\n"
+    
+    # Company Overview
+    md += "## 🏢 Company Overview\n\n"
+    md += f"- **회사명:** {company}\n- **업종:** {industry}\n\n"
+    if has_data(strategy):
+        md += f"### 🚀 전략\n\n{strategy}\n\n"
     
     # Stakeholder
-    md += "## ESG & Stakeholder Engagement\n**[GRI 2-12, 2-29]**\n\n"
-    md += "ESG 전담 조직 운영, 이해관계자 소통 채널 운영\n\n"
-    md += "| 이해관계자 | 관심사 | 채널 |\n|------------|--------|------|\n"
-    md += "| 고객 | 안전·품질 | VOC |\n| 임직원 | 안전·교육 | 교육 |\n"
-    md += "| 협력사 | ESG | 포털 |\n| 투자자 | 공시 | IR |\n| 지역사회 | 환경 | 봉사 |\n\n"
+    # Only show generic stakeholder table if it's a standard report (no custom sections)
+    custom_sections = data.get("custom_sections", [])
     
-    # Materiality
-    md += "## Double Materiality Assessment\n**[GRI 3-1, 3-2]**\n\n"
-    md += "### GRI 3-1: 프로세스\n이슈 풀 → 이중 평가 → 우선순위 → 승인\n\n"
-    md += "### GRI 3-2: 중대 이슈\n"
-    md += "| 이슈 | 재무(%) | 영향(%) | GRI |\n|------|---------|---------|-----|\n"
+    if not custom_sections:
+        md += "## 🤝 ESG & Stakeholder Engagement\n\n"
+        md += "이해관계자 소통 채널 운영 현황\n\n"
+        md += "| 이해관계자 | 관심사 | 채널 |\n|------------|--------|------|\n"
+        md += "| 👥 고객 | 안전·품질 | VOC |\n| 👷 임직원 | 안전·교육 | 교육 |\n"
+        md += "| 🏗️ 협력사 | ESG | 포털 |\n| 💰 투자자 | 공시 | IR |\n| 🏙️ 지역사회 | 환경 | 봉사 |\n\n"
+    
+    # Materiality (Only if issues exist)
+    mapper = GRIMapper()
+    issues = data.get("material_issues", [])
+    if issues:
+        mapper.analyze_issues(issues) # Run mapping
+    
+    # Render Materiality
+    md += "## 📌 Double Materiality Assessment\n\n"
+    md += f"### 주요 이슈 도출 ({len(issues)}건)\n\n"
+    md += "| 이슈 | 중요도(%) | 재무영향(%) | 관련 영역 |\n|------|---------|---------|-----|\n"
     for issue in issues:
-        if issue.get("isMaterial"):
-            mapped = []
-            for kw, codes in MATERIALITY_TO_GRI.items():
-                if kw in issue.get("name", "").lower():
-                    mapped.extend(codes)
-            gri_str = ", ".join(sorted(set(mapped))) if mapped else "-"
-            md += f"| {issue['name']} | {issue['financial']} | {issue['impact']} | {gri_str} |\n"
+        ref_str = "-"
+        name_lower = issue.get("name", "").lower()
+        
+        # Simple E/S/G inference for K-ESG
+        categories = []
+        for kw, codes in MATERIALITY_TO_GRI.items():
+            if kw in name_lower:
+                # GRI_TOPICS has 'cat' field (e.g. '환경', '사회', '경제')
+                # Take first code to find category
+                first_code = codes[0]
+                if first_code in GRI_TOPICS:
+                    categories.append(GRI_TOPICS[first_code]['cat'])
+        
+        if categories:
+             # Unique sorted categories (e.g. "환경, 사회")
+             ref_str = ", ".join(sorted(set(categories)))
+        else:
+             ref_str = "일반"
+
+        md += f"| {issue['name']} | {issue['impact']} | {issue['financial']} | {ref_str} |\n"
     md += "\n"
+    
+    # ---------------------------------------------------------
+    # Custom / Dynamic Sections (Proposed Flexibility)
+    # ---------------------------------------------------------
+    if custom_sections:
+        for section in custom_sections:
+            title = section.get("title", "Section")
+            content = section.get("content", "")
+            md += f"## 🚩 {title}\n\n{content}\n\n"
+            
+    # Standard Sections (Environmental, Social, Governance)
+    # These will naturally be skipped if the LLM left them empty as instructed.
     
     # Environmental
-    env_tags = ["GRI 3-3"]
-    for c in mapper.applicable_gri:
-        if c.startswith("GRI 30") and int(c.split()[1]) < 310:
-            env_tags.append(c)
-    md += f"## Environmental Performance\n{_tag(env_tags)}\n\n"
-    md += f"### Policy\n{env_pol}\n\n"
-    md += f"### Climate Action\n{_tag(['GRI 302','GRI 305'] if 'GRI 302' in mapper.applicable_gri or 'GRI 305' in mapper.applicable_gri else [])}\n\n{climate}\n\n"
-    md += "### Resources\n물, 폐기물 관리 입력\n\n"
-    md += "### KPIs\n"
-    for r in env_data:
-        md += f"- {r.get('year')}: {r.get('value')}\n"
-    md += "\n"
-    
+    if has_data(env_pol) or has_data(climate) or env_data:
+        md += "## 🌿 Environmental Performance\n\n"
+        if has_data(env_pol): md += f"### 📜 Policy\n\n{env_pol}\n\n"
+        if has_data(climate): md += f"### 🌍 Climate Action\n\n{climate}\n\n"
+        if env_data:
+            md += "### 📉 Key Indicators\n\n"
+            for r in env_data:
+                md += f"- {r.get('year')}: {r.get('value')}\n"
+            md += "\n"
+
     # Social
-    soc_tags = ["GRI 3-3"]
-    for c in mapper.applicable_gri:
-        if c.startswith("GRI 40"):
-            soc_tags.append(c)
-    md += f"## Social Performance\n{_tag(soc_tags)}\n\n"
-    md += f"### Human Rights\n{social_pol}\n\n"
-    md += "### Talent\n**[GRI 2-7]**\n\n채용, 교육, 평가 입력\n\n"
-    md += f"### Safety\n{_tag(['GRI 403'] if 'GRI 403' in mapper.applicable_gri else [])}\n\n{safety}\n\n"
-    for r in safety_data:
-        md += f"- {r.get('year')}: {r.get('value')}\n"
-    md += "\n"
-    
-    sup_tags = ["GRI 2-6"]
-    if "GRI 308" in mapper.applicable_gri:
-        sup_tags.append("GRI 308")
-    if "GRI 414" in mapper.applicable_gri:
-        sup_tags.append("GRI 414")
-    md += f"### Supply Chain\n{_tag(sup_tags)}\n\n{supply_pol}\n\n"
-    md += "| 카테고리 | 리스크 | 조치 | 현황 |\n|----------|--------|------|------|\n"
-    for r in supply_risk:
-        md += f"| {r.get('category')} | {r.get('riskLevel')} | {r.get('action')} | {r.get('status')} |\n"
-    md += "\n**Due Diligence:** 체크리스트 → 평가 → 점검 → 개선 → CAP\n\n"
-    md += "### Quality\n품질 관리 입력\n\n"
-    md += "### Community\n지역사회 입력\n\n"
-    
+    if has_data(social_pol) or has_data(safety) or safety_data or has_data(supply_pol):
+        md += "## 👥 Social Performance\n\n"
+        if has_data(social_pol): md += f"### ⚖️ Human Rights\n\n{social_pol}\n\n"
+        if has_data(safety): md += f"### 🦺 Safety Management\n\n{safety}\n\n"
+        if safety_data:
+            md += "#### 📊 Safety KPIs\n\n"
+            for r in safety_data:
+                md += f"- {r.get('year')}: {r.get('value')}\n"
+            md += "\n"
+        if has_data(supply_pol):
+            md += f"### 🏗️ Supply Chain\n\n{supply_pol}\n\n"
+            if supply_risk:
+                md += "| 카테고리 | 리스크 | 조치 | 현황 |\n|----------|--------|------|------|\n"
+                for r in supply_risk:
+                    md += f"| {r.get('category')} | {r.get('riskLevel')} | {r.get('action')} | {r.get('status')} |\n"
+                md += "\n"
+
     # Governance
-    md += f"## Governance\n{_tag(['GRI 2-9','GRI 3-3'])}\n\n"
-    md += f"### Structure\n**[GRI 2-9, 2-10]**\n\n{gov}\n\n"
-    md += "### Committees\n| 위원회 | 구성 | 역할 |\n|--------|------|------|\n"
-    md += "| 감사 | 사외 | 감사 |\n| ESG | 사외 과반 | ESG |\n\n"
-    
-    eth_tags = ["GRI 2-23", "GRI 2-26"]
-    if "GRI 205" in mapper.applicable_gri:
-        eth_tags.append("GRI 205")
-    md += f"### Ethics\n{_tag(eth_tags)}\n\n{ethics}\n\n"
-    md += "### Info Security\n정보보호 입력\n\n"
-    md += "### Risk Management\n리스크 관리 입력\n\n"
-    
+    if has_data(gov) or has_data(ethics):
+        md += "## ⚖️ Governance\n\n"
+        if has_data(gov): md += f"### 🏛️ Structure\n\n{gov}\n\n"
+        # Committees table removed as it was hardcoded.
+        if has_data(ethics): md += f"### 📜 Ethics\n\n{ethics}\n\n"
+
     # Appendices
-    md += "---\n# Appendices\n\n"
+    if data.get("esg_data_details") or standard == "GRI":
+        md += "---\n# Appendices\n\n"
     
-    if data.get("sasb_index"):
-        md += "## A: SASB Index\n"
-        md += "| 항목 | 위치 | GRI |\n|------|------|-----|\n"
-        md += "| GHG | Environmental | GRI 305 |\n"
-        md += "| LTIR | Safety | GRI 403 |\n"
-        md += "| Supply Chain | Supply Chain | GRI 308, 414 |\n\n"
-    
-    md += "## B: ESG Data\n"
+    # B: ESG Data (Only if details exist)
     if data.get("esg_data_details"):
+        md += "## ESG Data Details\n"
         for s in data["esg_data_details"]:
             md += f"### {s.get('title')}\n{s.get('content')}\n\n"
-    else:
-        md += "ESG 지표 표 입력\n\n"
     
-    md += "## C: UN SDGs\n"
-    if data.get("sdg_mapping"):
-        md += "| SDG | 과제 | 활동 |\n|-----|------|------|\n"
-        for r in data["sdg_mapping"]:
-            md += f"| {r['goal']} | {r['task']} | {r['activities']} |\n"
-        md += "\n"
+    # C: Index
+    if standard == "GRI":
+        md += "## GRI Content Index\n"
+        md += mapper.generate_index()
     else:
-        md += "SDG 매핑 입력\n\n"
-    
-    md += "## D: " + mapper.generate_index()
-    
-    md += "\n## E: Policy\n"
-    if data.get("policy_principles"):
-        pp = data["policy_principles"]
-        md += f"### 이사회 독립성\n{pp.get('board_independence','입력')}\n\n"
-        md += f"### 괴롭힘 예방\n{pp.get('anti_harassment','입력')}\n\n"
-        md += f"### 부패방지\n{pp.get('anti_corruption','입력')}\n\n"
-        md += f"### 환경경영\n{pp.get('env_policy','입력')}\n\n"
-    else:
-        md += "정책 입력\n\n"
+        # K-ESG Index - only show if we have content for it, otherwise skipping as requested
+        # Currently no data for it, so omitting to avoid "Empty Section" complaints.
+        pass
     
     return md
 

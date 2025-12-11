@@ -1,12 +1,16 @@
 import logging
 from fastapi import APIRouter, UploadFile, File, HTTPException, Body, Form
 from fastapi.responses import StreamingResponse
-from typing import List, Optional
-from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field
 import shutil
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
+
+from src.tools.report_tool.report_tool import generate_report_from_query
+from src.tools.regulation_tool import _monitor_instance as regulation_monitor
 from backend.manager import agent_manager
 
 try:
@@ -128,6 +132,13 @@ async def list_conversation_files(conversation_id: str):
         raise HTTPException(status_code=404, detail="Conversation not found")
     return agent_manager.list_conversation_files(conversation_id)
 
+@router.get("/conversations/{conversation_id}/reports")
+async def list_conversation_reports(conversation_id: str):
+    conversation = agent_manager.get_conversation(conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return agent_manager.list_conversation_reports(conversation_id)
+
 @router.delete("/conversations/{conversation_id}")
 async def delete_conversation(conversation_id: str):
     if not agent_manager.delete_conversation(conversation_id):
@@ -197,7 +208,7 @@ async def chat(request: ChatRequest):
         rag_text = "\n\n".join(rag_snippets) if rag_snippets else "None"
         rag_text = "\n\n".join(rag_snippets) if rag_snippets else "None"
         system_prompt = f"""
-        You are an expert ESG AI Assistant. Your goal is to help the user with ESG (Environmental, Social, and Governance) related tasks.
+        You are an expert ESG AI Assistant. Provide concise, tailored answers that reflect the user's goal and constraints.
 
         [Current Context]
         - Uploaded Files: {file_names if file_names else 'None'}
@@ -215,13 +226,22 @@ async def chat(request: ChatRequest):
         [Retrieved Segments from Uploaded Files]
         {rag_text}
         
-        [Guidelines]
-        - 답변 형식은 유연하게 사용자가 이해하기 쉬운 Markdown으로 작성하되, 필요 시 요약/근거/권고 구조를 활용하라.
-        - Regulation 관련 질문에는 최신 규제 업데이트를 우선 반영하라.
+
+        [Instructions]
+        - Start by tagging the user's goal/constraints in one line; if unclear, ask ONE short clarifying question, then proceed.
+        - Use evidence in this priority: Regulation Updates → Policy Analysis → Risk Assessment → Report Draft → Uploaded Files → Chat History; if absent, note '해당 근거 없음'.
+        - Keep internal reasoning to 3 short lines before responding.
+        - Do not invent numbers/dates absent from context; flag missing data explicitly. When giving numbers, cite the source inline. If regulation/policy is mentioned, add a one-line note that this is not legal advice.
+        - Tone: professional and friendly; keep sections 2–4 bullets/lines; keep the whole response concise (~200 words).
+        - Language follows the user (default Korean); avoid mixing languages. Use - or * for bullets, **bold** for emphasis, `code` for technical terms.
+        - If confidence is low, mark it (신뢰도: 높음/중간/낮음) and suggest what to check next (file/regulation/data).
+        - ALWAYS use MARKDOWN formatting.
         - 업로드된 파일이나 검색된 세그먼트에서 중요 근거가 있으면 인용해 설명하라.
         - 중요한 숫자·지표·정책명은 굵게 표시해 주목성을 높여라.
-        - 모르는 내용은 솔직하게 밝히고 어떤 에이전트를 실행해야 할지 제안해라.
+        - 모르는 내용은 솔직하게 밝혀라
         - 기본 언어는 한국어이지만, 사용자가 영어로 질문하면 동일 언어로 답하라.
+
+        If you don't know, say so and recommend running the appropriate agent (Regulation, Policy, Risk, Report)
         """
         
         # 3. Call LLM (GPT-4o)
@@ -251,6 +271,7 @@ async def chat_stream(request: ChatRequest):
     try:
         context = agent_manager.get_context()
         # SSE 스트림도 동일하게 conversation_id를 요구
+        # 1. Conversation Setup (User's Logic)
         conversation_id = request.conversation_id
         if conversation_id:
             conversation = agent_manager.get_conversation(conversation_id)
@@ -267,10 +288,139 @@ async def chat_stream(request: ChatRequest):
                 for entry in history
             ]
         )
+        # 2. Intent Detection (Report Logic)
+        # Check if the user specifically wants to *generate* or *create* a report/checklist/document.
+        class IntentAnalysis(BaseModel):
+            is_generation_request: bool = Field(description="True if user wants to CREATE/WRITE a report/checklist, False otherwise.")
+            
+        intent_system_prompt = """
+        Analyze the user's latest query to determine if they want to GENERATE a new report, checklist, or document.
+        
+        True:
+        - "Make a safety report"
+        - "Generate a checklist for ESG"
+        - "Write a draft"
+        
+        False:
+        - "What is K-ESG?"
+        - "Summarize this file"
+        - "Explain the safety policy"
+        
+        Return JSON: {"is_generation_request": boolean}
+        """
+        try:
+            intent_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+            structured_intent = intent_llm.with_structured_output(IntentAnalysis)
+            intent = structured_intent.invoke([
+                SystemMessage(content=intent_system_prompt),
+                HumanMessage(content=request.query)
+            ])
+            is_report_request = intent.is_generation_request
+        except Exception as e:
+            print(f"⚠️ Intent detection failed: {e}")
+            is_report_request = False
 
+        report_content = None
+        report_error = None
+        
+
+        # 3. Report Generation (If requested)
+        if is_report_request:
+            print(f"📄 Report generation intent detected for: {request.query}")
+            try:
+                # Content Schema Definition
+                class MaterialIssue(BaseModel):
+                    name: str = Field(description="Name of the material issue")
+                    impact: int = Field(description="Importance (0-100)")
+                    financial: int = Field(description="Financial impact (0-100)")
+                    isMaterial: bool = Field(description="Always True")
+
+                class ReportSection(BaseModel):
+                    title: str = Field(description="Section heading")
+                    content: str = Field(description="Section content in markdown")
+
+                class ReportContentGen(BaseModel):
+                    company_name: str = Field(description="Exact Name of the company found in the [Uploaded File Content].")
+                    esg_strategy: str = Field(description="Main ESG strategy sentence from the file.")
+                    env_policy: Optional[str] = Field(description="Environmental policy summary (Standard K-ESG).")
+                    social_policy: Optional[str] = Field(description="Social policy summary (Standard K-ESG).")
+                    gov_structure: Optional[str] = Field(description="Governance structure summary (Standard K-ESG).")
+                    material_issues: Optional[List[MaterialIssue]] = Field(default=None, description="List of material issues. Empty if custom format needed.")
+                    custom_sections: List[ReportSection] = Field(description="Dynamic sections for specific topics.")
+
+                # Extract context from files (Using NEW Conversation File Logic ideally, but falling back to global for safety/compatibility)
+                # Ideally: agent_manager.get_conversation_files_with_text(conversation_id)
+                # But kept simpler for now to match previous logic structure
+                uploaded_files = context.get("uploaded_files", [])
+                file_context_str = ""
+                
+                if uploaded_files:
+                    print(f"📂 Processing {len(uploaded_files)} files for report context...")
+                    import pypdf
+                    for text_file in uploaded_files: 
+                        try:
+                            fname = text_file.get("filename")
+                            fpath = os.path.join(UPLOAD_DIR, fname)
+                            content = ""
+                            if fname.lower().endswith(".pdf"):
+                                reader = pypdf.PdfReader(fpath)
+                                content = "\n".join([utils.extract_text() for utils in reader.pages])
+                            else:
+                                with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
+                                    content = f.read()
+                            file_context_str += f"\n=== File: {fname} ===\n{content[:100000]}\n" 
+                        except Exception as e:
+                            print(f"⚠️ Failed to read file {fname}: {e}")
+
+                content_system_prompt = f"""
+                You are an expert ESG consultant (K-ESG).
+                User Query: "{request.query}"
+                
+                [Context]
+                - Industry: Construction (Default)
+                - Guidelines: K-ESG Guideline v2.0.                
+                [Uploaded File Content]
+                {file_context_str if file_context_str else "No uploaded files found."}
+                
+                [Instructions]
+                Generate content based ONLY on the file content.
+                If 'Specific Topic' (e.g. Safety), ignore standard policies and create 'custom_sections'.
+                If 'General', fill standard fields.
+                If User mentions Company Name, use it. Else extract from file.
+                """
+                
+                llm = ChatOpenAI(model="gpt-4o", temperature=0.7)
+                structured_llm = llm.with_structured_output(ReportContentGen)
+                report_data_obj = structured_llm.invoke([
+                    SystemMessage(content=content_system_prompt),
+                    HumanMessage(content="Generate the report content.")
+                ])
+                report_data = report_data_obj.model_dump()
+
+                # Generate Markdown (using esg_report_generator)
+                # We need to ensure 'uploaded_files' metadata is passed if needed, or just generate from data
+                # Using the existing generate_report_from_query wrapper might be easier if it accepts data, 
+                # but here we did it manually. Let's call the generator logic directly?
+                # Actually, standard 'generate_report_from_query' does the whole thing.
+                # To avoid duplicating logic, I am effectively re-implementing 'generate_report_from_query' logic inline here 
+                # as per previous 'api.py' state.
+                
+                from src.tools.report_tool.esg_report_generator import generate_esg_report
+                report_content = generate_esg_report(report_data, standard="K-ESG")
+                report_error = None
+                
+            except Exception as e:
+                print(f"❌ Report generation failed: {e}")
+                import traceback
+                traceback.print_exc()
+                report_content = None
+                report_error = f"Report Generation Error: {str(e)}"
+        
+        # 4. Standard Chat Context & Response
         custom_result = await agent_manager.run_custom_agent(request.query)
         risk_assessment = context.get('risk_assessment')
         risk_summary = str(risk_assessment)[:500] + "..." if risk_assessment else "None"
+        
         file_summaries = agent_manager.list_conversation_files(conversation_id)
         file_context = agent_manager.build_file_context(conversation_id)
         file_names = [entry["filename"] for entry in file_summaries]
@@ -278,7 +428,7 @@ async def chat_stream(request: ChatRequest):
         rag_text = "\n\n".join(rag_snippets) if rag_snippets else "None"
 
         system_prompt = f"""
-        You are an expert ESG AI Assistant. Your goal is to help the user with ESG (Environmental, Social, and Governance) related tasks.
+        You are an expert ESG AI Assistant. Provide concise, tailored answers.
 
         [Current Context]
         - Uploaded Files: {file_names if file_names else 'None'}
@@ -286,18 +436,11 @@ async def chat_stream(request: ChatRequest):
         - Policy Analysis: {context.get('policy_analysis', 'None')}
         - Risk Assessment: {risk_summary}
         - Report Draft: {context.get('report_draft', 'None')}
-
-        [Conversation History]
-        {history_text if history_text else 'None'}
-
-        [Auto-Generated Insights]
-        - Policy Summary: {custom_result.get('policy')}
-        - Regulation Update: {custom_result.get('regulation')}
-        - Risk Analysis: {custom_result.get('risk')}
-        - Report Draft: {custom_result.get('report')}
-
+        
         [Uploaded File Excerpts]
         {file_context if file_context else 'None'}
+
+
 
         [Retrieved Segments from Uploaded Files]
         {rag_text}
@@ -308,27 +451,73 @@ async def chat_stream(request: ChatRequest):
         - 업로드 파일/검색된 세그먼트에서 나온 핵심 증거를 우선 인용하라.
         - 주요 수치나 정책명은 **굵게** 표시해 강조하고, 근거가 부족하면 솔직히 말하고 어떤 에이전트를 호출해야 할지 제안하라.
         - 기본 언어는 한국어이며, 사용자가 영어로 질문하면 영어로 답하라.
+
         """
+        
+        if report_content:
+             system_prompt += "\n[System Note]\nA report has just been generated and displayed to the user. Briefly mention this in your response."
 
         llm = ChatOpenAI(model="gpt-4o", temperature=0.5, streaming=True)
-        
         messages = [
             SystemMessage(content=system_prompt),
             HumanMessage(content=request.query)
         ]
 
         agent_manager.append_conversation_message(conversation_id, "user", request.query)
-
         assistant_buffer = {"text": ""}
 
         async def event_generator():
             try:
-                async for chunk in llm.astream(messages):
-                    token = chunk.content or ""
-                    if token:
-                        assistant_buffer["text"] += token
-                        yield f"data: {json.dumps({'token': token})}\n\n"
-                # 최종 응답을 한 번만 저장하기 위해 버퍼 사용
+                if report_content:
+                     # Save the report to the conversation
+                    try:
+                        report_to_save = {
+                            "id": str(int(datetime.now().timestamp() * 1000)), # Use timestamp ID to match frontend convention
+                            "title": request.query[:20] + ("..." if len(request.query) > 20 else ""), # Simple title derivation
+                            "content": report_content,
+                            "items": [], # Populate if structured data available, else empty
+                            "created_at": datetime.now().isoformat()
+                        }
+                        agent_manager.add_conversation_report(conversation_id, report_to_save)
+                    except Exception as e:
+                        print(f"Failed to save report: {e}")
+
+                    yield f"data: {json.dumps({'report': report_content})}\n\n"
+                    
+                    # LLM generates a short confirmation
+                    # Update system prompt to enforce brevity for this case
+                    confirmation_system_prompt = system_prompt + """
+                    
+                    [IMPORTANT]
+                    A report has just been generated and displayed to the user.
+                    Do NOT summarize the report content.
+                    Do NOT repeat the details.
+                    Simply say something like "Reqeuested report has been generated." in a friendly Korean tone.
+                    Keep it under 1 sentence.
+                    """
+                    
+                    # We need a new messages list with this updated prompt
+                    confirmation_messages = [
+                        SystemMessage(content=confirmation_system_prompt),
+                        HumanMessage(content=request.query)
+                    ]
+
+                    async for chunk in llm.astream(confirmation_messages):
+                        token = chunk.content or ""
+                        if token:
+                            assistant_buffer["text"] += token
+                            yield f"data: {json.dumps({'token': token})}\n\n"
+                
+                else:
+                    if report_error:
+                        yield f"data: {json.dumps({'error': report_error})}\n\n"
+                    
+                    async for chunk in llm.astream(messages):
+                        token = chunk.content or ""
+                        if token:
+                            assistant_buffer["text"] += token
+                            yield f"data: {json.dumps({'token': token})}\n\n"
+                
                 agent_manager.append_conversation_message(
                     conversation_id,
                     "assistant",
@@ -340,5 +529,8 @@ async def chat_stream(request: ChatRequest):
 
         return StreamingResponse(event_generator(), media_type="text/event-stream")
     except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        print(f"❌ [API Error] {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
 LOGGER = logging.getLogger(__name__)
