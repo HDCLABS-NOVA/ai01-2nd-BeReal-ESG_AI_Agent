@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, UploadFile, File, HTTPException, Body, Form
 from fastapi.responses import StreamingResponse
 from typing import List, Optional
@@ -58,26 +59,37 @@ def _extract_text_from_file(file_path: str, content_type: Optional[str] = None) 
 
 @router.post("/upload")
 async def upload_file(
-    conversation_id: str = Form(...),
+    conversation_id: Optional[str] = Form(None),
     file: UploadFile = File(...)
 ):
     try:
-        conversation = agent_manager.get_conversation(conversation_id)
-        if not conversation:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+        if conversation_id:
+            conversation = agent_manager.get_conversation(conversation_id)
+            if not conversation:
+                raise HTTPException(status_code=404, detail="Conversation not found")
         file_path = os.path.join(UPLOAD_DIR, file.filename)
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
         file_text = _extract_text_from_file(file_path, file.content_type)
         size_bytes = os.path.getsize(file_path)
-        agent_manager.add_conversation_file(
-            conversation_id,
-            filename=file.filename,
-            path=file_path,
-            size_bytes=size_bytes,
-            text=file_text,
-        )
+        if conversation_id:
+            agent_manager.add_conversation_file(
+                conversation_id,
+                filename=file.filename,
+                path=file_path,
+                size_bytes=size_bytes,
+                text=file_text,
+            )
+        else:
+            # Legacy: 전역 uploaded_files 리스트만 갱신
+            current_files = agent_manager.get_context().get("uploaded_files", [])
+            filtered = [entry for entry in current_files if entry.get("filename") != file.filename]
+            relative_path = f"/static/uploads/{file.filename}"
+            filtered.append({"filename": file.filename, "path": relative_path})
+            if len(filtered) > 50:
+                filtered = filtered[-50:]
+            agent_manager.update_context("uploaded_files", filtered)
 
         return {
             "conversation_id": conversation_id,
@@ -178,6 +190,12 @@ async def chat(request: ChatRequest):
         file_summaries = agent_manager.list_conversation_files(conversation_id)
         file_context = agent_manager.build_file_context(conversation_id)
         file_names = [entry["filename"] for entry in file_summaries]
+        rag_snippets = agent_manager.retrieve_conversation_snippets(conversation_id, request.query)
+        rag_text = "\n\n".join(rag_snippets) if rag_snippets else "None"
+        rag_text = "\n\n".join(rag_snippets) if rag_snippets else "None"
+        rag_text = "\n\n".join(rag_snippets) if rag_snippets else "None"
+        rag_text = "\n\n".join(rag_snippets) if rag_snippets else "None"
+        rag_text = "\n\n".join(rag_snippets) if rag_snippets else "None"
         system_prompt = f"""
         You are an expert ESG AI Assistant. Your goal is to help the user with ESG (Environmental, Social, and Governance) related tasks.
 
@@ -193,34 +211,17 @@ async def chat(request: ChatRequest):
 
         [Uploaded File Excerpts]
         {file_context if file_context else 'None'}
+
+        [Retrieved Segments from Uploaded Files]
+        {rag_text}
         
-        [Instructions]
-        - Answer the user's question based on the context provided above.
-        - **IMPORTANT**: ALWAYS use MARKDOWN formatting for all responses
-        - If the user asks about specific regulations or news, refer to the 'Latest Regulation Updates' section.
-        - Be professional, concise, and helpful.
-
-        [Output Format - MANDATORY]
-        ## 📊 요약
-        (2-3문장으로 핵심 내용을 명확하게 설명)
-
-        ## 🔍 근거
-        - 근거 항목 1
-        - 근거 항목 2
-        - 근거 항목 3
-
-        ## 💡 권고사항
-        - 권고 항목 1
-        - 권고 항목 2
-
-        [Formatting Rules]
-        - Use ## for main section headings
-        - Use - or * for bullet points (NOT •)
-        - Use **bold** for emphasis on key terms
-        - Use `code` for technical terms or file names
-        - Use proper line breaks between sections
-        - If you don't know the answer, admit it and suggest running a specific agent (Regulation, Policy, Risk, etc.).
-        - Language: Korean (unless the user asks in English).
+        [Guidelines]
+        - 답변 형식은 유연하게 사용자가 이해하기 쉬운 Markdown으로 작성하되, 필요 시 요약/근거/권고 구조를 활용하라.
+        - Regulation 관련 질문에는 최신 규제 업데이트를 우선 반영하라.
+        - 업로드된 파일이나 검색된 세그먼트에서 중요 근거가 있으면 인용해 설명하라.
+        - 중요한 숫자·지표·정책명은 굵게 표시해 주목성을 높여라.
+        - 모르는 내용은 솔직하게 밝히고 어떤 에이전트를 실행해야 할지 제안해라.
+        - 기본 언어는 한국어이지만, 사용자가 영어로 질문하면 동일 언어로 답하라.
         """
         
         # 3. Call LLM (GPT-4o)
@@ -273,6 +274,8 @@ async def chat_stream(request: ChatRequest):
         file_summaries = agent_manager.list_conversation_files(conversation_id)
         file_context = agent_manager.build_file_context(conversation_id)
         file_names = [entry["filename"] for entry in file_summaries]
+        rag_snippets = agent_manager.retrieve_conversation_snippets(conversation_id, request.query)
+        rag_text = "\n\n".join(rag_snippets) if rag_snippets else "None"
 
         system_prompt = f"""
         You are an expert ESG AI Assistant. Your goal is to help the user with ESG (Environmental, Social, and Governance) related tasks.
@@ -296,33 +299,15 @@ async def chat_stream(request: ChatRequest):
         [Uploaded File Excerpts]
         {file_context if file_context else 'None'}
 
-        [Instructions]
-        - Answer using the template below to emulate an expert ESG consultant.
-        - **IMPORTANT**: ALWAYS use MARKDOWN formatting for all responses
+        [Retrieved Segments from Uploaded Files]
+        {rag_text}
 
-        [Output Format - MANDATORY]
-        ## 📊 요약
-        (2-3문장으로 핵심 내용을 명확하게 설명)
-
-        ## 🔍 근거
-        - 근거 항목 1
-        - 근거 항목 2
-        - 근거 항목 3
-
-        ## 💡 권고사항
-        - 권고 항목 1
-        - 권고 항목 2
-
-        [Formatting Rules]
-        - Use ## for main section headings with emojis (📊 요약, 🔍 근거, 💡 권고사항)
-        - Use - or * for bullet points (NOT •)
-        - Use **bold** for emphasis on key terms
-        - Use `code` for technical terms or file names
-        - Use proper line breaks between sections
-        - 답변에 최신 규제/정책/리스크 정보를 자연스럽게 녹여라.
-        - Be professional, concise, and helpful.
-        - If you don't know the answer, admit it and suggest running a specific agent (Regulation, Policy, Risk, etc.).
-        - Language: Korean (unless the user asks in English).
+        [Guidelines]
+        - 질문 의도에 맞춰 유연하게 Markdown을 사용하되, 필요하면 요약/근거/권고 등으로 자연스럽게 나눠라.
+        - Regulation 관련 질문에는 최신 규제 업데이트를 우선적으로 언급하라.
+        - 업로드 파일/검색된 세그먼트에서 나온 핵심 증거를 우선 인용하라.
+        - 주요 수치나 정책명은 **굵게** 표시해 강조하고, 근거가 부족하면 솔직히 말하고 어떤 에이전트를 호출해야 할지 제안하라.
+        - 기본 언어는 한국어이며, 사용자가 영어로 질문하면 영어로 답하라.
         """
 
         llm = ChatOpenAI(model="gpt-4o", temperature=0.5, streaming=True)
@@ -356,3 +341,4 @@ async def chat_stream(request: ChatRequest):
         return StreamingResponse(event_generator(), media_type="text/event-stream")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
+LOGGER = logging.getLogger(__name__)
