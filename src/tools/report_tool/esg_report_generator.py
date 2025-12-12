@@ -251,7 +251,8 @@ def generate_esg_report(data: Dict[str, Any], standard: str = "GRI") -> str:
     
     # Materiality (Only if issues exist)
     mapper = GRIMapper()
-    issues = data.get("material_issues", [])
+    # Allow upstream caller to pass explicit null to skip issues without breaking len()
+    issues = data.get("material_issues") or []
     if issues:
         mapper.analyze_issues(issues) # Run mapping
     
